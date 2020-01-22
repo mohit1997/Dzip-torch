@@ -49,17 +49,19 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
             bx = Variable(torch.from_numpy(series_2d[:,j:j+timesteps])).to(device)
             with torch.no_grad():
                 model.eval()
-                prob = torch.exp(model(bx)).detach().cpu().numpy()
+                pred = model(bx)
+                prob = torch.exp(pred).detach().cpu().numpy()
             cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
             for i in range(bs):
                 series_2d[i,j+timesteps] = dec[i].read(cumul[i,:], vocab_size)
             by = Variable(torch.from_numpy(series_2d[:, j+timesteps])).to(device)
+            loss = loss_function(pred, by)
+            train_loss += loss.item()
             model.train()
             optimizer.zero_grad()
             pred = model(bx)
             loss = loss_function(pred, by)
             loss.backward()
-            train_loss += loss.item()
             # nn.utils.clip_grad_norm_(model.parameters(), 0.1)
             optimizer.step()
             if (j+1)%100 == 0:
