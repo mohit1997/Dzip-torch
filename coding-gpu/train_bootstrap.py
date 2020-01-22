@@ -54,17 +54,17 @@ os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
 num_epochs=FLAGS.epochs
 
 batch_size=2048
-sequence_length=64
+timesteps=64
 use_cuda = True
 
 use_cuda = use_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
 sequence = np.load(FLAGS.file_name + ".npy")
-n_classes = len(np.unique(sequence))
+vocab_size = len(np.unique(sequence))
 sequence = sequence
 
-X, Y = generate_single_output_data(sequence, batch_size, sequence_length)
+X, Y = generate_single_output_data(sequence, batch_size, timesteps)
 X = X.astype('int32')
 Y = Y.astype('int32')
 
@@ -74,14 +74,30 @@ train_loader = torch.utils.data.DataLoader(train_dataset,
                                         batch_size=batch_size,
                                         shuffle=True, **kwargs)
 
-model = BootstrapNN(vocab_size=n_classes,
-                    emb_size=8,
-                    length=sequence_length,
-                    jump=16,
-                    hdim1=8,
-                    hdim2=16,
-                    n_layers=2,
-                    bidirectional=True).to(device)
+dic = {'vocab_size': vocab_size, 'emb_size': 8,
+        'length': timesteps, 'jump': 16,
+        'hdim1': 8, 'hdim2': 16, 'n_layers': 2,
+        'bidirectional': True}
+
+if vocab_size >= 1 and vocab_size <=3:
+    dic['hdim1'] = 8
+    dic['hdim2'] = 16
+  
+if vocab_size >= 4 and vocab_size <=8:
+    dic['hdim1'] = 32
+    dic['hdim2'] = 16
+
+if vocab_size >= 10 and vocab_size < 128:
+    dic['hdim1'] = 128
+    dic['hdim2'] = 128
+    dic['emb_size'] = 16
+
+if vocab_size >= 128:
+    dic['hdim1'] = 128
+    dic['hdim2'] = 256
+    dic['emb_size'] = 16
+
+model = BootstrapNN(**dic).to(device)
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
 for epoch in range(FLAGS.epochs):

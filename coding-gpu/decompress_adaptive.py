@@ -130,7 +130,7 @@ def main():
     f.close()
 
     batch_size = params['bs']
-    timestep = params['timesteps']
+    timesteps = params['timesteps']
     len_series = params['len_series']
     id2char_dict = params['id2char_dict']
     vocab_size = len(id2char_dict)
@@ -141,20 +141,43 @@ def main():
 
     series = np.zeros(len_series,dtype=np.uint8)
 
-    bsmodel = BootstrapNN(vocab_size=vocab_size,
-                        emb_size=8,
-                        length=timestep,
-                        jump=16,
-                        hdim1=8,
-                        hdim2=16,
-                        n_layers=2,
-                        bidirectional=True).to(device)
+    bsdic = {'vocab_size': vocab_size, 'emb_size': 8,
+        'length': timesteps, 'jump': 16,
+        'hdim1': 8, 'hdim2': 16, 'n_layers': 2,
+        'bidirectional': True}
+    comdic = {'vocab_size': vocab_size, 'emb_size': 32,
+        'length': timesteps, 'hdim': 8}
+
+    if vocab_size >= 1 and vocab_size <=3:
+        bsdic['hdim1'] = 8
+        bsdic['hdim2'] = 16
+        comdic['emb_size'] = 16
+        comdic['hdim'] = 1024
+      
+    if vocab_size >= 4 and vocab_size <=9:
+        bsdic['hdim1'] = 32
+        bsdic['hdim2'] = 16
+        comdic['emb_size'] = 16
+        comdic['hdim'] = 1024
+
+    if vocab_size >= 10 and vocab_size < 128:
+        bsdic['hdim1'] = 128
+        bsdic['hdim2'] = 128
+        bsdic['emb_size'] = 16
+        comdic['emb_size'] = 32
+        comdic['hdim'] = 2048
+
+    if vocab_size >= 128:
+        bsdic['hdim1'] = 128
+        bsdic['hdim2'] = 256
+        bsdic['emb_size'] = 16
+        comdic['emb_size'] = 32
+        comdic['hdim'] = 2048
+
+    bsmodel = BootstrapNN(**bsdic).to(device)
     bsmodel.load_state_dict(torch.load(FLAGS.model_weights_path))
-    commodel = CombinedNN(bsNN=bsmodel,
-                        vocab_size=vocab_size,
-                        emb_size=32,
-                        length=timestep,
-                        hdim=1024).to(device)
+    comdic['bsNN'] = bsmodel
+    commodel = CombinedNN(**comdic).to(device)
     
     for name, p in commodel.named_parameters():
         if "bs" in name:
@@ -164,9 +187,9 @@ def main():
 
     l = int(len(series)/batch_size)*batch_size
     
-    series[:l] = decompress(commodel, l, batch_size, vocab_size, timestep, device, optimizer)
-    if l < len_series - timestep:
-        series[l:] = decompress(commodel, len_series-l, 1, vocab_size, timestep, device, optimizer, final_step = True)
+    series[:l] = decompress(commodel, l, batch_size, vocab_size, timesteps, device, optimizer)
+    if l < len_series - timesteps:
+        series[l:] = decompress(commodel, len_series-l, 1, vocab_size, timesteps, device, optimizer, final_step = True)
     else:
         f = open(FLAGS.temp_file_prefix+'.last','rb')
         bitin = arithmeticcoding_fast.BitInputStream(f)

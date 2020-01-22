@@ -125,7 +125,7 @@ def main():
     os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
 
     batch_size=256
-    timestep=64
+    timesteps=64
     use_cuda = True
 
     with open(FLAGS.params, 'r') as f:
@@ -145,7 +145,7 @@ def main():
 
     sequence = sequence.reshape(-1)
     series = sequence.copy()
-    data = strided_app(series, timestep+1, 1)
+    data = strided_app(series, timesteps+1, 1)
     X = data[:, :-1]
     Y = data[:, -1]
     X = X.astype('int')
@@ -153,26 +153,49 @@ def main():
 
     params['len_series'] = len(series)
     params['bs'] = batch_size
-    params['timesteps'] = timestep
+    params['timesteps'] = timesteps
 
     with open(FLAGS.output+'.params','w') as f:
         json.dump(params, f, indent=4)
 
 
-    bsmodel = BootstrapNN(vocab_size=vocab_size,
-                        emb_size=8,
-                        length=timestep,
-                        jump=16,
-                        hdim1=8,
-                        hdim2=16,
-                        n_layers=2,
-                        bidirectional=True).to(device)
+    bsdic = {'vocab_size': vocab_size, 'emb_size': 8,
+        'length': timesteps, 'jump': 16,
+        'hdim1': 8, 'hdim2': 16, 'n_layers': 2,
+        'bidirectional': True}
+    comdic = {'vocab_size': vocab_size, 'emb_size': 32,
+        'length': timesteps, 'hdim': 8}
+
+    if vocab_size >= 1 and vocab_size <=3:
+        bsdic['hdim1'] = 8
+        bsdic['hdim2'] = 16
+        comdic['emb_size'] = 16
+        comdic['hdim'] = 1024
+      
+    if vocab_size >= 4 and vocab_size <=9:
+        bsdic['hdim1'] = 32
+        bsdic['hdim2'] = 16
+        comdic['emb_size'] = 16
+        comdic['hdim'] = 1024
+
+    if vocab_size >= 10 and vocab_size < 128:
+        bsdic['hdim1'] = 128
+        bsdic['hdim2'] = 128
+        bsdic['emb_size'] = 16
+        comdic['emb_size'] = 32
+        comdic['hdim'] = 2048
+
+    if vocab_size >= 128:
+        bsdic['hdim1'] = 128
+        bsdic['hdim2'] = 256
+        bsdic['emb_size'] = 16
+        comdic['emb_size'] = 32
+        comdic['hdim'] = 2048
+
+    bsmodel = BootstrapNN(**bsdic).to(device)
     bsmodel.load_state_dict(torch.load(FLAGS.model_weights_path))
-    commodel = CombinedNN(bsNN=bsmodel,
-                        vocab_size=vocab_size,
-                        emb_size=32,
-                        length=timestep,
-                        hdim=1024).to(device)
+    comdic['bsNN'] = bsmodel
+    commodel = CombinedNN(**comdic).to(device)
     
     for name, p in commodel.named_parameters():
         if "bs" in name:
@@ -182,9 +205,9 @@ def main():
 
     l = int(len(series)/batch_size)*batch_size
     
-    compress(commodel, X, Y, batch_size, vocab_size, timestep, device, optimizer)
-    if l < len(series)-timestep:
-        compress(commodel, X[l:], Y[l:], 1, vocab_size, timestep, device, optimizer, final_step = True)
+    compress(commodel, X, Y, batch_size, vocab_size, timesteps, device, optimizer)
+    if l < len(series)-timesteps:
+        compress(commodel, X[l:], Y[l:], 1, vocab_size, timesteps, device, optimizer, final_step = True)
     else:
         f = open(FLAGS.temp_file_prefix+'.last','wb')
         bitout = arithmeticcoding_fast.BitOutputStream(f)
