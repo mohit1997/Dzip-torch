@@ -183,7 +183,7 @@ def main():
         if "bs" in name:
             p.requires_grad = False
     
-    optimizer = optim.Adam(commodel.parameters(), lr=1e-3, betas=(0.0, 0.999))
+    optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.9, 0.999))
 
     l = int(len(series)/batch_size)*batch_size
     

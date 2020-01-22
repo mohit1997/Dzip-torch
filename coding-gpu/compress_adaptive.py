@@ -106,8 +106,8 @@ def get_argument_parser():
                         help='GPU to use')
     parser.add_argument('--output', type=str, default='comp',
                         help='Name of the output file')
-    parser.add_argument('--params', type=str, default='params_xor10_small',
-                        help='Name of the output file')
+    # parser.add_argument('--params', type=str, default='params_xor10_small',
+    #                     help='Name of the output file')
     return parser
 
 
@@ -124,9 +124,11 @@ def var_int_encode(byte_str_len, f):
 def main():
     os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
 
-    batch_size=256
+    batch_size=128
     timesteps=64
     use_cuda = True
+
+    FLAGS.params = "params_" + FLAGS.file_name
 
     with open(FLAGS.params, 'r') as f:
         params = json.load(f)
@@ -201,7 +203,7 @@ def main():
         if "bs" in name:
             p.requires_grad = False
     
-    optimizer = optim.Adam(commodel.parameters(), lr=1e-3, betas=(0.0, 0.999))
+    optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.9, 0.999))
 
     l = int(len(series)/batch_size)*batch_size
     
