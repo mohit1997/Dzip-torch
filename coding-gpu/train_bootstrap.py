@@ -10,8 +10,8 @@ from utils import *
 import argparse
 
 torch.manual_seed(0)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+# torch.backends.cudnn.deterministic = True
+# torch.backends.cudnn.benchmark = False
 # os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 
 def loss_function(pred, target):
@@ -31,6 +31,7 @@ def train(epoch, reps=20):
         train_loss += loss.item()
         nn.utils.clip_grad_norm_(model.parameters(), 0.1)
         optimizer.step()
+        scheduler.step()
         if batch_idx % 10 == 0:
             print('====> Epoch: {} Batch {}/{} Average loss: {:.10f}'.format(
             epoch, batch_idx+1, len(train_loader), train_loss / (batch_idx+1)), end='\r', flush=True)
@@ -68,7 +69,7 @@ X, Y = generate_single_output_data(sequence, batch_size, timesteps)
 X = X.astype('int32')
 Y = Y.astype('int32')
 
-kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+kwargs = {'num_workers': 16, 'pin_memory': True} if use_cuda else {}
 train_dataset = CustomDL(X, Y)
 train_loader = torch.utils.data.DataLoader(train_dataset,
                                         batch_size=batch_size,
@@ -98,8 +99,12 @@ if vocab_size >= 128:
     dic['hdim2'] = 256
     dic['emb_size'] = 16
 
+print("CudNN version", torch.backends.cudnn.version())
 model = BootstrapNN(**dic).to(device)
-optimizer = optim.Adam(model.parameters(), lr=1e-3)
+decayrate = 1.0/(len(Y) // batch_size)
+optimizer = optim.Adam(model.parameters(), lr=5e-3)
+fcn = lambda step: 1./(1. + decayrate*step)
+scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=fcn)
 
 for epoch in range(FLAGS.epochs):
     train(epoch+1)
