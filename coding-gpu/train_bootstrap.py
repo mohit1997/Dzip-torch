@@ -12,7 +12,7 @@ import argparse
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+# os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 
 def loss_function(pred, target):
     loss = 1/np.log(2) * F.nll_loss(pred, target)
@@ -31,12 +31,12 @@ def train(epoch, reps=20):
         train_loss += loss.item()
         nn.utils.clip_grad_norm_(model.parameters(), 0.1)
         optimizer.step()
-        if batch_idx % 100 == 0:
-            print('====> Epoch: {} Average loss: {:.10f}'.format(
-            epoch, train_loss / (batch_idx+1)), end='\r')        
+        if batch_idx % 10 == 0:
+            print('====> Epoch: {} Batch {}/{} Average loss: {:.10f}'.format(
+            epoch, batch_idx+1, len(train_loader), train_loss / (batch_idx+1)), end='\r', flush=True)
 
     print('====> Epoch: {} Average loss: {:.10f}'.format(
-        epoch, train_loss / (batch_idx+1)))
+        epoch, train_loss / (batch_idx+1)), flush=True)
 
 def get_argument_parser():
     parser = argparse.ArgumentParser();
@@ -59,7 +59,7 @@ use_cuda = True
 
 use_cuda = use_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
-
+print("Using", device)
 sequence = np.load(FLAGS.file_name + ".npy")
 vocab_size = len(np.unique(sequence))
 sequence = sequence
@@ -79,6 +79,7 @@ dic = {'vocab_size': vocab_size, 'emb_size': 8,
         'hdim1': 8, 'hdim2': 16, 'n_layers': 2,
         'bidirectional': True}
 
+print("Vocab Size {}".format(vocab_size))
 if vocab_size >= 1 and vocab_size <=3:
     dic['hdim1'] = 8
     dic['hdim2'] = 16
@@ -103,7 +104,7 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3)
 for epoch in range(FLAGS.epochs):
     train(epoch+1)
 
-torch.save(model.state_dict(), "bstrap")
+torch.save(model.state_dict(), FLAGS.file_name + "_bstrap")
 
 print("Done")
 

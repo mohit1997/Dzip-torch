@@ -136,6 +136,7 @@ def main():
         params = json.load(f)
 
     FLAGS.temp_dir = 'temp'
+    os.system("rm -r {}".format(FLAGS.temp_dir))
     FLAGS.temp_file_prefix = FLAGS.temp_dir + "/compressed"
     if not os.path.exists(FLAGS.temp_dir):
         os.makedirs(FLAGS.temp_dir)
