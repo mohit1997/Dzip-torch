@@ -26,6 +26,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
     
     if not final_step:
         num_iters = len_series // bs
+        print(num_iters)
         series_2d = np.zeros((bs,num_iters), dtype = np.uint8).astype('int')
         ind = np.array(range(bs))*num_iters
 
@@ -47,6 +48,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
         for j in (range(num_iters - timesteps)):
             # Write Code for probability extraction
             bx = Variable(torch.from_numpy(series_2d[:,j:j+timesteps])).to(device)
+            # print(series_2d[:, j:j+timesteps])
             with torch.no_grad():
                 model.eval()
                 pred = model(bx)
@@ -54,18 +56,25 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
             cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
             for i in range(bs):
                 series_2d[i,j+timesteps] = dec[i].read(cumul[i,:], vocab_size)
+                # print("decoded", series_2d[i,j+timesteps])
             by = Variable(torch.from_numpy(series_2d[:, j+timesteps])).to(device)
             loss = loss_function(pred, by)
             train_loss += loss.item()
-            model.train()
-            optimizer.zero_grad()
-            pred = model(bx)
-            loss = loss_function(pred, by)
-            loss.backward()
-            # nn.utils.clip_grad_norm_(model.parameters(), 0.1)
-            optimizer.step()
+            if (j+1) % 4 == 0:
+                model.train()
+                optimizer.zero_grad()
+                data_x = np.concatenate([series_2d[:, j + np.arange(timesteps) - p] for p in range(4)], axis=0)
+                data_y = np.concatenate([series_2d[:, j + timesteps - p] for p in range(4)], axis=0)
+
+                bx = Variable(torch.from_numpy(data_x)).to(device)
+                by = Variable(torch.from_numpy(data_y)).to(device)
+                pred = model(bx)
+                loss = loss_function(pred, by)
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), 5)
+                optimizer.step()
             if (j+1)%100 == 0:
-                print("Iter {} Loss {:.4f}".format(j+1, train_loss/(j+1)))
+                print("Iter {} Loss {:.4f}".format(j+1, train_loss/(j+1)), flush=True)
 
         # close files
         for i in range(bs):
@@ -97,12 +106,10 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
 
 def get_argument_parser():
     parser = argparse.ArgumentParser();
-    parser.add_argument('--file_name', type=str, default='comp',
+    parser.add_argument('--file_name', type=str, default='chr20',
                         help='The name of the input file')
     parser.add_argument('--output', type=str, default='xor10_small_decomp',
                         help='The name of the output file')
-    parser.add_argument('--model_weights_path', type=str, default='bstrap',
-                        help='Path to model weights')
     parser.add_argument('--gpu', type=str, default='0',
                         help='GPU to use')
     return parser
@@ -177,7 +184,7 @@ def main():
         comdic['hdim'] = 2048
 
     bsmodel = BootstrapNN(**bsdic).to(device)
-    bsmodel.load_state_dict(torch.load(FLAGS.model_weights_path))
+    bsmodel.load_state_dict(torch.load(FLAGS.file_name +"_bstrap"))
     comdic['bsNN'] = bsmodel
     commodel = CombinedNN(**comdic).to(device)
     
@@ -185,7 +192,7 @@ def main():
         if "bs" in name:
             p.requires_grad = False
     
-    optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.9, 0.999))
+    optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
 
     l = int(len(series)/batch_size)*batch_size
     

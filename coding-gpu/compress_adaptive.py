@@ -26,7 +26,9 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, final_st
     
     if not final_step:
         num_iters = (len(X)+timesteps) // bs
+        print(num_iters)
         ind = np.array(range(bs))*num_iters
+        back_ind = np.array(range(bs))*num_iters
 
         f = [open(FLAGS.temp_file_prefix+'.'+str(i),'wb') for i in range(bs)]
         bitout = [arithmeticcoding_fast.BitOutputStream(f[i]) for i in range(bs)]
@@ -40,6 +42,7 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, final_st
             for j in range(min(timesteps, num_iters)):
                 enc[i].write(cumul, X[ind[i],j])
 
+
         cumul = np.zeros((bs, vocab_size+1), dtype = np.uint64)
 
         train_loss = 0
@@ -47,6 +50,7 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, final_st
             # Write Code for probability extraction
             bx = Variable(torch.from_numpy(X[ind,:])).to(device)
             by = Variable(torch.from_numpy(Y[ind])).to(device)
+            # print(X[ind, :])
             with torch.no_grad():
                 model.eval()
                 pred = model(bx)
@@ -56,18 +60,24 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, final_st
             cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
             for i in range(bs):
                 enc[i].write(cumul[i,:], Y[ind[i]])
-            ind = ind + 1
+            
 
-            model.train()
-            optimizer.zero_grad()
-            pred = model(bx)
-            loss = loss_function(pred, by)
-            loss.backward()
-            # nn.utils.clip_grad_norm_(model.parameters(), 0.1)
-            optimizer.step()
+            if (j+1) % 4 == 0:
+                indices = np.concatenate([ind - p for p in range(4)], axis=0)
+                
+                bx = Variable(torch.from_numpy(X[indices,:])).to(device)
+                by = Variable(torch.from_numpy(Y[indices])).to(device)
+                model.train()
+                optimizer.zero_grad()
+                pred = model(bx)
+                loss = loss_function(pred, by)
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), 5)
+                optimizer.step()
+            ind = ind + 1
             
             if (j+1)%100 == 0:
-                print("Iter {} Loss {:.4f}".format(j+1, train_loss/(j+1)))
+                print("Iter {} Loss {:.4f}".format(j+1, train_loss/(j+1)), flush=True)
 
         # close files
         for i in range(bs):
@@ -102,8 +112,6 @@ def get_argument_parser():
     parser = argparse.ArgumentParser();
     parser.add_argument('--file_name', type=str, default='xor10_small',
                         help='The name of the input file')
-    parser.add_argument('--model_weights_path', type=str, default='bstrap',
-                        help='Path to model weights')
     parser.add_argument('--gpu', type=str, default='0',
                         help='GPU to use')
     parser.add_argument('--output', type=str, default='comp',
@@ -126,7 +134,7 @@ def var_int_encode(byte_str_len, f):
 def main():
     os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
 
-    batch_size=128
+    batch_size=512
     timesteps=64
     use_cuda = True
 
@@ -153,14 +161,15 @@ def main():
     data = strided_app(series, timesteps+1, 1)
     X = data[:, :-1]
     Y = data[:, -1]
-    X = X.astype('int')
-    Y = Y.astype('int')
+    print("array type", X.dtype)
+    # X = X.astype('int')
+    # Y = Y.astype('int')
 
     params['len_series'] = len(series)
     params['bs'] = batch_size
     params['timesteps'] = timesteps
 
-    with open(FLAGS.output+'.params','w') as f:
+    with open(FLAGS.file_name+'.params','w') as f:
         json.dump(params, f, indent=4)
 
 
@@ -198,7 +207,7 @@ def main():
         comdic['hdim'] = 2048
 
     bsmodel = BootstrapNN(**bsdic).to(device)
-    bsmodel.load_state_dict(torch.load(FLAGS.model_weights_path))
+    bsmodel.load_state_dict(torch.load(FLAGS.file_name +"_bstrap"))
     comdic['bsNN'] = bsmodel
     commodel = CombinedNN(**comdic).to(device)
     
@@ -206,7 +215,7 @@ def main():
         if "bs" in name:
             p.requires_grad = False
     
-    optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.9, 0.999))
+    optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
 
     l = int(len(series)/batch_size)*batch_size
     

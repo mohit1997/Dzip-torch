@@ -22,7 +22,7 @@ def train(epoch, reps=20):
     model.train()
     train_loss = 0
     for batch_idx, sample in enumerate(train_loader):
-        # data = torch.from_numpy(data)
+        
         data, target = sample['x'].to(device), sample['y'].to(device)
         optimizer.zero_grad()
         pred = model(data)
@@ -32,8 +32,8 @@ def train(epoch, reps=20):
         nn.utils.clip_grad_norm_(model.parameters(), 0.1)
         optimizer.step()
         scheduler.step()
-        if batch_idx % 10 == 0:
-            print('====> Epoch: {} Batch {}/{} Average loss: {:.10f}'.format(
+        if batch_idx % 500 == 0:
+            print('====> Epoch: {} Batch {}/{} Average loss: {:.4f}'.format(
             epoch, batch_idx+1, len(train_loader), train_loss / (batch_idx+1)), end='\r', flush=True)
 
     print('====> Epoch: {} Average loss: {:.10f}'.format(
@@ -66,10 +66,10 @@ vocab_size = len(np.unique(sequence))
 sequence = sequence
 
 X, Y = generate_single_output_data(sequence, batch_size, timesteps)
-X = X.astype('int32')
-Y = Y.astype('int32')
+X = X
+Y = Y
 
-kwargs = {'num_workers': 16, 'pin_memory': True} if use_cuda else {}
+kwargs = {'num_workers': 4, 'pin_memory': True} if use_cuda else {}
 train_dataset = CustomDL(X, Y)
 train_loader = torch.utils.data.DataLoader(train_dataset,
                                         batch_size=batch_size,
@@ -106,7 +106,7 @@ optimizer = optim.Adam(model.parameters(), lr=5e-3)
 fcn = lambda step: 1./(1. + decayrate*step)
 scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=fcn)
 
-for epoch in range(FLAGS.epochs):
+for epoch in range(num_epochs):
     train(epoch+1)
 
 torch.save(model.state_dict(), FLAGS.file_name + "_bstrap")
