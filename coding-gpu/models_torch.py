@@ -32,7 +32,7 @@ class BootstrapNN(nn.Module):
     def forward(self, inp):
         emb = self.embedding(inp)
         output, hidden = self.rnn_cell(emb)
-        slicedoutput = torch.flip(output, [2])[:,::self.jump,:]
+        slicedoutput = torch.flip(output, [1])[:,::self.jump,:]
         batch_size = slicedoutput.size()[0]
         flat = slicedoutput.contiguous().view(batch_size, -1)
         prelogits = x = self.lin1(flat)
@@ -95,7 +95,7 @@ class CombinedNN(nn.Module):
     def forward(self, inp):
         emb = self.bsembedding(inp)
         output, hidden = self.bsrnn_cell(emb)
-        slicedoutput = torch.flip(output, [2])[:,::self.bsjump,:]
+        slicedoutput = torch.flip(output, [1])[:,::self.bsjump,:]
         batch_size = slicedoutput.size()[0]
         flat = slicedoutput.contiguous().view(batch_size, -1)
         prelogits = x = self.bslin1(flat)

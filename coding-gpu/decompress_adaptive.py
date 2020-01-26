@@ -22,7 +22,7 @@ def loss_function(pred, target):
     loss = 1/np.log(2) * F.nll_loss(pred, target)
     return loss
 
-def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, final_step=False):
+def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, scheduler, final_step=False):
     
     if not final_step:
         num_iters = len_series // bs
@@ -45,6 +45,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
         cumul = np.zeros((bs, vocab_size+1), dtype = np.uint64)
 
         train_loss = 0
+        batch_loss = 0
         for j in (range(num_iters - timesteps)):
             # Write Code for probability extraction
             bx = Variable(torch.from_numpy(series_2d[:,j:j+timesteps])).to(device)
@@ -60,6 +61,12 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
             by = Variable(torch.from_numpy(series_2d[:, j+timesteps])).to(device)
             loss = loss_function(pred, by)
             train_loss += loss.item()
+            batch_loss += loss.item()
+            
+            if (j+1) % 100 == 0:
+                print("Iter {} Loss {:.4f} Moving Loss {:4f}".format(j+1, train_loss/(j+1), batch_loss/100), flush=True)
+                batch_loss = 0
+
             if (j+1) % 4 == 0:
                 model.train()
                 optimizer.zero_grad()
@@ -73,8 +80,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
                 loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 5)
                 optimizer.step()
-            if (j+1)%100 == 0:
-                print("Iter {} Loss {:.4f}".format(j+1, train_loss/(j+1)), flush=True)
+
 
         # close files
         for i in range(bs):
@@ -193,12 +199,12 @@ def main():
             p.requires_grad = False
     
     optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
-
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, threshold=1e-2, patience=1000, cooldown=10000, min_lr=1e-4, verbose=True)
     l = int(len(series)/batch_size)*batch_size
     
-    series[:l] = decompress(commodel, l, batch_size, vocab_size, timesteps, device, optimizer)
+    series[:l] = decompress(commodel, l, batch_size, vocab_size, timesteps, device, optimizer, scheduler)
     if l < len_series - timesteps:
-        series[l:] = decompress(commodel, len_series-l, 1, vocab_size, timesteps, device, optimizer, final_step = True)
+        series[l:] = decompress(commodel, len_series-l, 1, vocab_size, timesteps, device, optimizer, scheduler, final_step = True)
     else:
         f = open(FLAGS.temp_file_prefix+'.last','rb')
         bitin = arithmeticcoding_fast.BitInputStream(f)

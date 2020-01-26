@@ -22,7 +22,7 @@ def loss_function(pred, target):
     loss = 1/np.log(2) * F.nll_loss(pred, target)
     return loss
 
-def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, final_step=False):
+def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, scheduler, final_step=False):
     
     if not final_step:
         num_iters = (len(X)+timesteps) // bs
@@ -46,6 +46,7 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, final_st
         cumul = np.zeros((bs, vocab_size+1), dtype = np.uint64)
 
         train_loss = 0
+        batch_loss = 0
         for j in (range(num_iters - timesteps)):
             # Write Code for probability extraction
             bx = Variable(torch.from_numpy(X[ind,:])).to(device)
@@ -56,11 +57,15 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, final_st
                 pred = model(bx)
                 loss = loss_function(pred, by)
                 train_loss += loss.item()
+                batch_loss += loss.item()
                 prob = torch.exp(pred).detach().cpu().numpy()
             cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
             for i in range(bs):
                 enc[i].write(cumul[i,:], Y[ind[i]])
             
+            if (j+1)%100 == 0:
+                print("Iter {} Loss {:.4f} Moving Loss {:.4f}".format(j+1, train_loss/(j+1), batch_loss/100), flush=True)
+                batch_loss = 0
 
             if (j+1) % 4 == 0:
                 indices = np.concatenate([ind - p for p in range(4)], axis=0)
@@ -74,10 +79,8 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, final_st
                 loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 5)
                 optimizer.step()
-            ind = ind + 1
             
-            if (j+1)%100 == 0:
-                print("Iter {} Loss {:.4f}".format(j+1, train_loss/(j+1)), flush=True)
+            ind = ind + 1
 
         # close files
         for i in range(bs):
@@ -190,7 +193,7 @@ def main():
         bsdic['hdim1'] = 32
         bsdic['hdim2'] = 16
         comdic['emb_size'] = 16
-        comdic['hdim'] = 1024
+        comdic['hdim'] = 2048
 
     if vocab_size >= 10 and vocab_size < 128:
         bsdic['hdim1'] = 128
@@ -216,12 +219,13 @@ def main():
             p.requires_grad = False
     
     optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, threshold=1e-2, patience=1000, cooldown=10000, min_lr=1e-4, verbose=True)
 
     l = int(len(series)/batch_size)*batch_size
     
-    compress(commodel, X, Y, batch_size, vocab_size, timesteps, device, optimizer)
+    compress(commodel, X, Y, batch_size, vocab_size, timesteps, device, optimizer, scheduler)
     if l < len(series)-timesteps:
-        compress(commodel, X[l:], Y[l:], 1, vocab_size, timesteps, device, optimizer, final_step = True)
+        compress(commodel, X[l:], Y[l:], 1, vocab_size, timesteps, device, optimizer, scheduler, final_step = True)
     else:
         f = open(FLAGS.temp_file_prefix+'.last','wb')
         bitout = arithmeticcoding_fast.BitOutputStream(f)

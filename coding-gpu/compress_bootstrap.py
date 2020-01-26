@@ -246,7 +246,7 @@ def main():
                         hdim2=16,
                         n_layers=2,
                         bidirectional=True).to(device)
-    model.load_state_dict(torch.load(FLAGS.model_weights_path))
+    model.load_state_dict(torch.load(FLAGS.file_name +"_bstrap"))
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     # kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
