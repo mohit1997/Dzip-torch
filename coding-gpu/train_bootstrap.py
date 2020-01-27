@@ -38,6 +38,7 @@ def train(epoch, reps=20):
 
     print('====> Epoch: {} Average loss: {:.10f}'.format(
         epoch, train_loss / (batch_idx+1)), flush=True)
+    return train_loss / (batch_idx+1)
 
 def get_argument_parser():
     parser = argparse.ArgumentParser();
@@ -106,10 +107,14 @@ optimizer = optim.Adam(model.parameters(), lr=5e-3)
 fcn = lambda step: 1./(1. + decayrate*step)
 scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=fcn)
 
+epoch_loss = 1e8
 for epoch in range(num_epochs):
-    train(epoch+1)
+    lss = train(epoch+1)
+    if lss < epoch_loss:
+        torch.save(model.state_dict(), FLAGS.file_name + "_bstrap")
+        print("Loss went from {:.4f} to {:.4f}".format(epoch_loss, lss))
+        epoch_loss = lss
 
-torch.save(model.state_dict(), FLAGS.file_name + "_bstrap")
 
 print("Done")
 
