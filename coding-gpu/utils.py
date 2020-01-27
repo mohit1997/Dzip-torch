@@ -18,8 +18,8 @@ class CustomDL(Dataset):
   def __getitem__(self, idx):
     if torch.is_tensor(idx):
         idx = idx.tolist()
-    feat = self.features[idx].astype('int')
-    lab = self.labels[idx].astype('int')
+    feat = self.features[idx]
+    lab = self.labels[idx]
     sample = {'x': feat, 'y': lab}
 
     return sample
