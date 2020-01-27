@@ -13,6 +13,7 @@ import tempfile
 import argparse
 import arithmeticcoding_fast
 import struct
+import shutil
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -257,7 +258,7 @@ def main():
     f.write(byte_str)
     f_in.close()
     f.close()
-
+    shutil.rmtree(FLAGS.temp_dir)
     print("Done")
 
 
