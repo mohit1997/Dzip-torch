@@ -12,6 +12,7 @@ from utils import *
 import tempfile
 import argparse
 import arithmeticcoding_fast
+import struct
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -62,9 +63,9 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
             loss = loss_function(pred, by)
             train_loss += loss.item()
             batch_loss += loss.item()
-            
+
             if (j+1) % 100 == 0:
-                print("Iter {} Loss {:.4f} Moving Loss {:4f}".format(j+1, train_loss/(j+1), batch_loss/100), flush=True)
+                print("Iter {} Loss {:.4f} Moving Loss {:.4f}".format(j+1, train_loss/(j+1), batch_loss/100), flush=True)
                 batch_loss = 0
 
             if (j+1) % 4 == 0:
@@ -112,24 +113,28 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
 
 def get_argument_parser():
     parser = argparse.ArgumentParser();
-    parser.add_argument('--file_name', type=str, default='chr20',
+    parser.add_argument('--file_name', type=str, default='xor10_comp',
                         help='The name of the input file')
     parser.add_argument('--output', type=str, default='xor10_small_decomp',
                         help='The name of the output file')
+    parser.add_argument('--model_weights_path', type=str, default='xor10_small_bstrap',
+                        help='Path to model weights')
     parser.add_argument('--gpu', type=str, default='0',
                         help='GPU to use')
     return parser
 
 
-def var_int_encode(byte_str_len, f):
+def var_int_decode(f):
+    byte_str_len = 0
+    shift = 1
     while True:
-        this_byte = byte_str_len&127
-        byte_str_len >>= 7
-        if byte_str_len == 0:
-                f.write(struct.pack('B',this_byte))
+        this_byte = struct.unpack('B', f.read(1))[0]
+        byte_str_len += (this_byte & 127) * shift
+        if this_byte & 128 == 0:
                 break
-        f.write(struct.pack('B',this_byte|128))
-        byte_str_len -= 1
+        shift <<= 7
+        byte_str_len += shift
+    return byte_str_len
 
 def main():
     os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
@@ -149,6 +154,20 @@ def main():
     len_series = params['len_series']
     id2char_dict = params['id2char_dict']
     vocab_size = len(id2char_dict)
+
+    f = open(FLAGS.file_name+'.combined','rb')
+    for i in range(batch_size):
+        f_out = open(FLAGS.temp_file_prefix+'.'+str(i),'wb')
+        byte_str_len = var_int_decode(f)
+        byte_str = f.read(byte_str_len)
+        f_out.write(byte_str)
+        f_out.close()
+    f_out = open(FLAGS.temp_file_prefix+'.last','wb')
+    byte_str_len = var_int_decode(f)
+    byte_str = f.read(byte_str_len)
+    f_out.write(byte_str)
+    f_out.close()
+    f.close()
 
     use_cuda = use_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -173,7 +192,7 @@ def main():
         bsdic['hdim1'] = 32
         bsdic['hdim2'] = 16
         comdic['emb_size'] = 16
-        comdic['hdim'] = 1024
+        comdic['hdim'] = 2048
 
     if vocab_size >= 10 and vocab_size < 128:
         bsdic['hdim1'] = 128
@@ -190,7 +209,7 @@ def main():
         comdic['hdim'] = 2048
 
     bsmodel = BootstrapNN(**bsdic).to(device)
-    bsmodel.load_state_dict(torch.load(FLAGS.file_name +"_bstrap"))
+    bsmodel.load_state_dict(torch.load(FLAGS.model_weights_path))
     comdic['bsNN'] = bsmodel
     commodel = CombinedNN(**comdic).to(device)
     

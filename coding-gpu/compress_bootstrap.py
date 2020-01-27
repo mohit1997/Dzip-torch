@@ -11,66 +11,19 @@ from utils import *
 import tempfile
 import argparse
 import arithmeticcoding_fast
+import struct
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 
-class CustomDL(Dataset):
 
-  def __init__(self, features, labels):
-
-    self.features = features
-    self.labels = labels
-
-  def __len__(self):
-    return len(self.features)
-
-  def __getitem__(self, idx):
-    if torch.is_tensor(idx):
-        idx = idx.tolist()
-    feat = self.features[idx].astype('int')
-    lab = self.labels[idx].astype('int')
-    sample = {'x': feat, 'y': lab}
-
-    return sample
-
-def evaluate(model, loader, device):
-    model.eval()
-    pred_list = []
-    with torch.no_grad():
-        for sample in loader:
-            data = sample['x'].to(device)
-            pred_list.append(model(data).detach().cpu().numpy())
-
-    return np.concatenate(pred_list, axis=0)
 
 def loss_function(pred, target):
     loss = 1/np.log(2) * F.nll_loss(pred, target)
     return loss
 
-def train(model, loader, device):
-    train_loss = 0
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    pred_list = []
-    for batch_idx, sample in enumerate(loader):
-        # data = torch.from_numpy(data)
-        model.train()
-        data, target = sample['x'].to(device), sample['y'].to(device)
-        optimizer.zero_grad()
-        pred = model(data)
-        loss = loss_function(pred, target)
-        loss.backward()
-        # train_loss += loss.item()
-        nn.utils.clip_grad_norm_(model.parameters(), 0.1)
-        optimizer.step()
-        with torch.no_grad():
-            model.eval()
-            pred_list.append(model(data).detach().cpu().numpy())
-
-
-    return np.concatenate(pred_list, axis=0)
 
 def compress(model, X, Y, bs, vocab_size, timesteps, device, final_step=False):
     
@@ -103,6 +56,9 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, final_step=False):
             for i in range(bs):
                 enc[i].write(cumul[i,:], Y[ind[i]])
             ind = ind + 1
+
+            if (j+1)%100 == 0:
+                print("Step {}/{} ".format(j+1, num_iters - timesteps), flush=True)
 
         # close files
         for i in range(bs):
@@ -179,13 +135,9 @@ def get_argument_parser():
     parser = argparse.ArgumentParser();
     parser.add_argument('--file_name', type=str, default='xor10_small',
                         help='The name of the input file')
-    parser.add_argument('--model_weights_path', type=str, default='bstrap',
-                        help='Path to model weights')
     parser.add_argument('--gpu', type=str, default='0',
                         help='GPU to use')
     parser.add_argument('--output', type=str, default='comp',
-                        help='Name of the output file')
-    parser.add_argument('--params', type=str, default='params_xor10_small',
                         help='Name of the output file')
     return parser
 
@@ -204,10 +156,10 @@ def main():
     os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
 
     batch_size=512
-    timestep=64
+    timesteps=64
     use_cuda = True
 
-    with open(FLAGS.params, 'r') as f:
+    with open("params_"+ FLAGS.file_name, 'r') as f:
         params = json.load(f)
 
     FLAGS.temp_dir = 'temp'
@@ -224,7 +176,7 @@ def main():
 
     sequence = sequence.reshape(-1)
     series = sequence.copy()
-    data = strided_app(series, timestep+1, 1)
+    data = strided_app(series, timesteps+1, 1)
     X = data[:, :-1]
     Y = data[:, -1]
     X = X.astype('int')
@@ -232,42 +184,42 @@ def main():
 
     params['len_series'] = len(series)
     params['bs'] = batch_size
-    params['timesteps'] = timestep
+    params['timesteps'] = timesteps
 
     with open(FLAGS.output+'.params','w') as f:
         json.dump(params, f, indent=4)
 
+    bsdic = {'vocab_size': vocab_size, 'emb_size': 8,
+        'length': timesteps, 'jump': 16,
+        'hdim1': 8, 'hdim2': 16, 'n_layers': 2,
+        'bidirectional': True}
 
-    model = BootstrapNN(vocab_size=vocab_size,
-                        emb_size=8,
-                        length=timestep,
-                        jump=16,
-                        hdim1=8,
-                        hdim2=16,
-                        n_layers=2,
-                        bidirectional=True).to(device)
-    model.load_state_dict(torch.load(FLAGS.file_name +"_bstrap"))
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    if vocab_size >= 1 and vocab_size <=3:
+        bsdic['hdim1'] = 8
+        bsdic['hdim2'] = 16
+      
+    if vocab_size >= 4 and vocab_size <=9:
+        bsdic['hdim1'] = 32
+        bsdic['hdim2'] = 16
 
-    # kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-    # dataset = CustomDL(X, Y_original)
-    # loader = torch.utils.data.DataLoader(dataset,
-    #                                     batch_size=batch_size,
-    #                                     shuffle=False, **kwargs)
+    if vocab_size >= 10 and vocab_size < 128:
+        bsdic['hdim1'] = 128
+        bsdic['hdim2'] = 128
+        bsdic['emb_size'] = 16
 
-    # probs = evaluate(model, loader, device)
-    # print(probs.shape)
-    # np.save('probs_bs{}'.format(batch_size), probs)
+    if vocab_size >= 128:
+        bsdic['hdim1'] = 128
+        bsdic['hdim2'] = 256
+        bsdic['emb_size'] = 16
 
-    # probs = train(model, loader, device)
-    # print(probs.shape)
-    # np.save('probs_2', probs)
+    model = BootstrapNN(**bsdic).to(device)
+    model.load_state_dict(torch.load(FLAGS.file_name + "_bstrap"))
 
     l = int(len(series)/batch_size)*batch_size
     
-    compress(model, X, Y, batch_size, vocab_size, timestep, device)
-    if l < len(series)-timestep:
-        compress(model, X[l:], Y[l:], 1, vocab_size, timestep, device, final_step = True)
+    compress(model, X, Y, batch_size, vocab_size, timesteps, device)
+    if l < len(series)-timesteps:
+        compress(model, X[l:], Y[l:], 1, vocab_size, timesteps, device, final_step = True)
     else:
         f = open(args.temp_file_prefix+'.last','wb')
         bitout = arithmeticcoding_fast.BitOutputStream(f)
@@ -284,23 +236,22 @@ def main():
     
     print("Done")
     
-    # # combine files into one file
-    # f = open(args.output_file_prefix+'.combined','wb')
-    # for i in range(batch_size):
-    #     f_in = open(args.temp_file_prefix+'.'+str(i),'rb')
-    #     byte_str = f_in.read()
-    #     byte_str_len = len(byte_str)
-    #     var_int_encode(byte_str_len, f)
-    #     f.write(byte_str)
-    #     f_in.close()
-    # f_in = open(args.temp_file_prefix+'.last','rb')
-    # byte_str = f_in.read()
-    # byte_str_len = len(byte_str)
-    # var_int_encode(byte_str_len, f)
-    # f.write(byte_str)
-    # f_in.close()
-    # f.close()
-    # shutil.rmtree(args.temp_dir)
+    # combine files into one file
+    f = open(FLAGS.output+'.combined','wb')
+    for i in range(batch_size):
+        f_in = open(FLAGS.temp_file_prefix+'.'+str(i),'rb')
+        byte_str = f_in.read()
+        byte_str_len = len(byte_str)
+        var_int_encode(byte_str_len, f)
+        f.write(byte_str)
+        f_in.close()
+    f_in = open(FLAGS.temp_file_prefix+'.last','rb')
+    byte_str = f_in.read()
+    byte_str_len = len(byte_str)
+    var_int_encode(byte_str_len, f)
+    f.write(byte_str)
+    f_in.close()
+    f.close()
 
 
 if __name__ == "__main__":

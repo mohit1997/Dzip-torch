@@ -12,6 +12,7 @@ from utils import *
 import tempfile
 import argparse
 import arithmeticcoding_fast
+import struct
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -240,6 +241,23 @@ def main():
         bitout.close() 
         f.close()
     
+    # combine files into one file
+    f = open(FLAGS.output+'.combined','wb')
+    for i in range(batch_size):
+        f_in = open(FLAGS.temp_file_prefix+'.'+str(i),'rb')
+        byte_str = f_in.read()
+        byte_str_len = len(byte_str)
+        var_int_encode(byte_str_len, f)
+        f.write(byte_str)
+        f_in.close()
+    f_in = open(FLAGS.temp_file_prefix+'.last','rb')
+    byte_str = f_in.read()
+    byte_str_len = len(byte_str)
+    var_int_encode(byte_str_len, f)
+    f.write(byte_str)
+    f_in.close()
+    f.close()
+
     print("Done")
 
 

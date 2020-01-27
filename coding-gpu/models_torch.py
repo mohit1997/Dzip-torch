@@ -50,8 +50,10 @@ class CombinedNN(nn.Module):
         self.bsjump = bsNN.jump
         if bsNN.bidirectional:
             self.flin1 = nn.Linear(2*bsNN.hdim1*(length//bsNN.jump), vocab_size)
+            self.flat2_size = 2*bsNN.hdim1*(length//bsNN.jump) + emb_size*length
         else:
             self.flin1 = nn.Linear(bsNN.hdim1*(length//bsNN.jump), vocab_size)
+            self.flat2_size = bsNN.hdim1*(length//bsNN.jump) + emb_size*length
 
 
         self.flin2 = nn.Linear(bsNN.hdim2, vocab_size)
@@ -59,7 +61,6 @@ class CombinedNN(nn.Module):
         self.hdim = hdim
         self.embedding = nn.Embedding(vocab_size, emb_size)
 
-        self.flat2_size = 2*bsNN.hdim1*(length//bsNN.jump) + emb_size*length
         self.layer11 = nn.Sequential(
             nn.Linear(self.flat2_size, hdim),
             nn.ReLU(inplace=False)

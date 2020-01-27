@@ -11,66 +11,18 @@ from utils import *
 import tempfile
 import argparse
 import arithmeticcoding_fast
+import struct
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 
-class CustomDL(Dataset):
-
-  def __init__(self, features, labels):
-
-    self.features = features
-    self.labels = labels
-
-  def __len__(self):
-    return len(self.features)
-
-  def __getitem__(self, idx):
-    if torch.is_tensor(idx):
-        idx = idx.tolist()
-    feat = self.features[idx].astype('int')
-    lab = self.labels[idx].astype('int')
-    sample = {'x': feat, 'y': lab}
-
-    return sample
-
-def evaluate(model, loader, device):
-    model.eval()
-    pred_list = []
-    with torch.no_grad():
-        for sample in loader:
-            data = sample['x'].to(device)
-            pred_list.append(model(data).detach().cpu().numpy())
-
-    return np.concatenate(pred_list, axis=0)
 
 def loss_function(pred, target):
     loss = 1/np.log(2) * F.nll_loss(pred, target)
     return loss
 
-def train(model, loader, device):
-    train_loss = 0
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    pred_list = []
-    for batch_idx, sample in enumerate(loader):
-        # data = torch.from_numpy(data)
-        model.train()
-        data, target = sample['x'].to(device), sample['y'].to(device)
-        optimizer.zero_grad()
-        pred = model(data)
-        loss = loss_function(pred, target)
-        loss.backward()
-        # train_loss += loss.item()
-        nn.utils.clip_grad_norm_(model.parameters(), 0.1)
-        optimizer.step()
-        with torch.no_grad():
-            model.eval()
-            pred_list.append(model(data).detach().cpu().numpy())
-
-
-    return np.concatenate(pred_list, axis=0)
 
 def decompress(model, len_series, bs, vocab_size, timesteps, device, final_step=False):
     
@@ -177,26 +129,28 @@ class BootstrapNN(nn.Module):
 
 def get_argument_parser():
     parser = argparse.ArgumentParser();
-    parser.add_argument('--file_name', type=str, default='comp',
+    parser.add_argument('--file_name', type=str, default='xor10_comp',
                         help='The name of the input file')
     parser.add_argument('--output', type=str, default='xor10_small_decomp',
                         help='The name of the output file')
-    parser.add_argument('--model_weights_path', type=str, default='bstrap',
+    parser.add_argument('--model_weights_path', type=str, default='xor10_small_bstrap',
                         help='Path to model weights')
     parser.add_argument('--gpu', type=str, default='0',
                         help='GPU to use')
     return parser
 
 
-def var_int_encode(byte_str_len, f):
+def var_int_decode(f):
+    byte_str_len = 0
+    shift = 1
     while True:
-        this_byte = byte_str_len&127
-        byte_str_len >>= 7
-        if byte_str_len == 0:
-                f.write(struct.pack('B',this_byte))
+        this_byte = struct.unpack('B', f.read(1))[0]
+        byte_str_len += (this_byte & 127) * shift
+        if this_byte & 128 == 0:
                 break
-        f.write(struct.pack('B',this_byte|128))
-        byte_str_len -= 1
+        shift <<= 7
+        byte_str_len += shift
+    return byte_str_len
 
 def main():
     os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
@@ -212,32 +166,61 @@ def main():
     f.close()
 
     batch_size = params['bs']
-    timestep = params['timesteps']
+    timesteps = params['timesteps']
     len_series = params['len_series']
     id2char_dict = params['id2char_dict']
     vocab_size = len(id2char_dict)
+
+    f = open(FLAGS.file_name+'.combined','rb')
+    for i in range(batch_size):
+        f_out = open(FLAGS.temp_file_prefix+'.'+str(i),'wb')
+        byte_str_len = var_int_decode(f)
+        byte_str = f.read(byte_str_len)
+        f_out.write(byte_str)
+        f_out.close()
+    f_out = open(FLAGS.temp_file_prefix+'.last','wb')
+    byte_str_len = var_int_decode(f)
+    byte_str = f.read(byte_str_len)
+    f_out.write(byte_str)
+    f_out.close()
+    f.close()
 
     use_cuda = use_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
     series = np.zeros(len_series,dtype=np.uint8)
 
-    model = BootstrapNN(vocab_size=vocab_size,
-                        emb_size=8,
-                        length=timestep,
-                        jump=16,
-                        hdim1=8,
-                        hdim2=16,
-                        n_layers=2,
-                        bidirectional=True).to(device)
+    bsdic = {'vocab_size': vocab_size, 'emb_size': 8,
+        'length': timesteps, 'jump': 16,
+        'hdim1': 8, 'hdim2': 16, 'n_layers': 2,
+        'bidirectional': True}
 
+    if vocab_size >= 1 and vocab_size <=3:
+        bsdic['hdim1'] = 8
+        bsdic['hdim2'] = 16
+      
+    if vocab_size >= 4 and vocab_size <=9:
+        bsdic['hdim1'] = 32
+        bsdic['hdim2'] = 16
+
+    if vocab_size >= 10 and vocab_size < 128:
+        bsdic['hdim1'] = 128
+        bsdic['hdim2'] = 128
+        bsdic['emb_size'] = 16
+
+    if vocab_size >= 128:
+        bsdic['hdim1'] = 128
+        bsdic['hdim2'] = 256
+        bsdic['emb_size'] = 16
+
+    model = BootstrapNN(**bsdic).to(device)
     model.load_state_dict(torch.load(FLAGS.model_weights_path))
 
     l = int(len(series)/batch_size)*batch_size
     
-    series[:l] = decompress(model, l, batch_size, vocab_size, timestep, device)
-    if l < len_series - timestep:
-        series[l:] = decompress(model, len_series-l, 1, vocab_size, timestep, device, final_step = True)
+    series[:l] = decompress(model, l, batch_size, vocab_size, timesteps, device)
+    if l < len_series - timesteps:
+        series[l:] = decompress(model, len_series-l, 1, vocab_size, timesteps, device, final_step = True)
     else:
         f = open(FLAGS.temp_file_prefix+'.last','rb')
         bitin = arithmeticcoding_fast.BitInputStream(f)
