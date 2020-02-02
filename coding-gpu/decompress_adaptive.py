@@ -45,7 +45,8 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
 
         cumul = np.zeros((bs, vocab_size+1), dtype = np.uint64)
 
-        train_loss = 0
+        block_len = 20
+        test_loss = 0
         batch_loss = 0
         for j in (range(num_iters - timesteps)):
             # Write Code for probability extraction
@@ -53,7 +54,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
             # print(series_2d[:, j:j+timesteps])
             with torch.no_grad():
                 model.eval()
-                pred = model(bx)
+                pred, _ = model(bx)
                 prob = torch.exp(pred).detach().cpu().numpy()
             cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
             for i in range(bs):
@@ -61,23 +62,24 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
                 # print("decoded", series_2d[i,j+timesteps])
             by = Variable(torch.from_numpy(series_2d[:, j+timesteps])).to(device)
             loss = loss_function(pred, by)
-            train_loss += loss.item()
+            test_loss += loss.item()
             batch_loss += loss.item()
 
             if (j+1) % 100 == 0:
-                print("Iter {} Loss {:.4f} Moving Loss {:.4f}".format(j+1, train_loss/(j+1), batch_loss/100), flush=True)
+                print("Iter {} Loss {:.4f} Moving Loss {:.4f}".format(j+1, test_loss/(j+1), batch_loss/100), flush=True)
                 batch_loss = 0
 
-            if (j+1) % 4 == 0:
+            if (j+1) % block_len == 0:
                 model.train()
                 optimizer.zero_grad()
-                data_x = np.concatenate([series_2d[:, j + np.arange(timesteps) - p] for p in range(4)], axis=0)
-                data_y = np.concatenate([series_2d[:, j + timesteps - p] for p in range(4)], axis=0)
+                data_x = np.concatenate([series_2d[:, j + np.arange(timesteps) - p] for p in range(block_len)], axis=0)
+                data_y = np.concatenate([series_2d[:, j + timesteps - p] for p in range(block_len)], axis=0)
 
                 bx = Variable(torch.from_numpy(data_x)).to(device)
                 by = Variable(torch.from_numpy(data_y)).to(device)
-                pred = model(bx)
-                loss = loss_function(pred, by)
+                pred1, pred2 = model(bx)
+                loss2 = loss_function(pred2, by)
+                loss = loss_function(pred1, by) + loss2
                 loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 5)
                 optimizer.step()
@@ -113,7 +115,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
 
 def get_argument_parser():
     parser = argparse.ArgumentParser();
-    parser.add_argument('--file_name', type=str, default='xor10_comp',
+    parser.add_argument('--file_name', type=str, default='xor10_small_com',
                         help='The name of the input file')
     parser.add_argument('--output', type=str, default='xor10_small_decomp',
                         help='The name of the output file')
@@ -239,8 +241,7 @@ def main():
         f.close()
     
     np.save(FLAGS.output, series)
-    a = np.load('xor10_small.npy')
-    print("Decompressed file is same? {}".format(np.array_equal(a,series)))
+
     print("Done")
     
 

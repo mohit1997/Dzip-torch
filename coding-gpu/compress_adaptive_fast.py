@@ -54,7 +54,7 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
         for j in (range(num_iters - timesteps)):
             # Write Code for probability extraction
             if (j+1) % block_len == 0:
-                indices = np.concatenate([ind - p for p in range(block_len)], axis=0)
+                indices = np.concatenate([ind - p for p in range(block_len-1, -1, -1)], axis=0)
 
                 bx = Variable(torch.from_numpy(X[indices,:])).to(device)
                 by = Variable(torch.from_numpy(Y[indices])).to(device)
@@ -203,7 +203,7 @@ def main():
     params['bs'] = batch_size
     params['timesteps'] = timesteps
 
-    with open(FLAGS.file_name+'.params','w') as f:
+    with open(FLAGS.output+'.params','w') as f:
         json.dump(params, f, indent=4)
 
 
