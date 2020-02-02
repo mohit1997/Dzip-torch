@@ -4,15 +4,45 @@ import sys
 import torch
 import torch.nn.functional as F
 from torch import nn, optim
+import torch.nn.init as init
 from torch.utils.data import Dataset, DataLoader
 from models_torch import *
 from utils import *
 import argparse
+import time
 
 torch.manual_seed(0)
 # torch.backends.cudnn.deterministic = True
 # torch.backends.cudnn.benchmark = False
 # os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+
+def weight_init(m):
+    '''
+    Usage:
+        model = Model()
+        model.apply(weight_init)
+    '''
+    if isinstance(m, nn.Linear):
+        init.xavier_normal_(m.weight.data)
+        init.zeros_(m.bias.data)
+    elif isinstance(m, nn.GRU):
+        for value in m.state_dict():
+            if 'weight_ih' in value:
+                #print(value,param.shape,'Orthogonal')
+                init.xavier_normal_(m.state_dict()[value])
+            elif 'weight_hh' in value:
+                init.orthogonal_(m.state_dict()[value])
+            elif 'bias' in value:
+                init.zeros_(m.state_dict()[value])
+    elif isinstance(m, nn.GRUCell):
+        for value in m.state_dict():
+            if 'weight_ih' in value:
+                #print(value,param.shape,'Orthogonal')
+                init.xavier_normal_(m.state_dict()[value])
+            elif 'weight_hh' in value:
+                init.orthogonal_(m.state_dict()[value])
+            elif 'bias' in value:
+                init.zeros_(m.state_dict()[value])
 
 def loss_function(pred, target):
     loss = 1/np.log(2) * F.nll_loss(pred, target)
@@ -21,6 +51,7 @@ def loss_function(pred, target):
 def train(epoch, reps=20):
     model.train()
     train_loss = 0
+    start_time = time.time()
     for batch_idx, sample in enumerate(train_loader):
         
         data, target = sample['x'].to(device), sample['y'].to(device)
@@ -33,8 +64,10 @@ def train(epoch, reps=20):
         optimizer.step()
         scheduler.step()
         if batch_idx % 500 == 0:
+            print("{} secs".format(time.time() - start_time))
             print('====> Epoch: {} Batch {}/{} Average loss: {:.4f}'.format(
-            epoch, batch_idx+1, len(train_loader), train_loss / (batch_idx+1)), end='\r', flush=True)
+            epoch, batch_idx+1, len(Y)//batch_size, train_loss / (batch_idx+1)), end='\r', flush=True)
+            start_time = time.time()
 
     print('====> Epoch: {} Average loss: {:.10f}'.format(
         epoch, train_loss / (batch_idx+1)), flush=True)
@@ -102,7 +135,9 @@ if vocab_size >= 128:
 
 print("CudNN version", torch.backends.cudnn.version())
 model = BootstrapNN(**dic).to(device)
-decayrate = 1.0/(len(Y) // batch_size)
+model.apply(weight_init)
+mul = len(Y)/5e7
+decayrate = mul/(len(Y) // batch_size)
 optimizer = optim.Adam(model.parameters(), lr=5e-3)
 fcn = lambda step: 1./(1. + decayrate*step)
 scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=fcn)
@@ -111,7 +146,7 @@ epoch_loss = 1e8
 for epoch in range(num_epochs):
     lss = train(epoch+1)
     if lss < epoch_loss:
-        torch.save(model.state_dict(), FLAGS.file_name + "_bstrap")
+        torch.save(model.state_dict(), FLAGS.file_name + "_bstrap{}".format(epoch+1))
         print("Loss went from {:.4f} to {:.4f}".format(epoch_loss, lss))
         epoch_loss = lss
 

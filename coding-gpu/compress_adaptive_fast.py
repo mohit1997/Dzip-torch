@@ -45,26 +45,30 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
                 enc[i].write(cumul, X[ind[i],j])
 
 
-        cumul = np.zeros((bs, vocab_size+1), dtype = np.uint64)
+        cumul = np.zeros((bs*20, vocab_size+1), dtype = np.uint64)
 
         test_loss = 0
         batch_loss = 0
         train_loss = 0
         for j in (range(num_iters - timesteps)):
             # Write Code for probability extraction
-            bx = Variable(torch.from_numpy(X[ind,:])).to(device)
-            by = Variable(torch.from_numpy(Y[ind])).to(device)
-            # print(X[ind, :])
-            with torch.no_grad():
-                model.eval()
-                pred, _ = model(bx)
-                loss = loss_function(pred, by)
-                test_loss += loss.item()
-                batch_loss += loss.item()
-                prob = torch.exp(pred).detach().cpu().numpy()
-            cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
-            for i in range(bs):
-                enc[i].write(cumul[i,:], Y[ind[i]])
+            if (j+1) % 20 == 0:
+                indices = np.concatenate([ind - p for p in range(20)], axis=0)
+
+                bx = Variable(torch.from_numpy(X[indices,:])).to(device)
+                by = Variable(torch.from_numpy(Y[indices])).to(device)
+                # print(X[ind, :])
+                with torch.no_grad():
+                    model.eval()
+                    pred, _ = model(bx)
+                    loss = loss_function(pred, by)
+                    test_loss += loss.item()*20
+                    batch_loss += loss.item()*20
+                    prob = torch.exp(pred).detach().cpu().numpy()
+                cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
+                for i in range(bs):
+                    for s in range(20):
+                        enc[i].write(cumul[i + bs*s,:], Y[indices[i + bs*s]])
             
             if (j+1)%100 == 0:
                 print("Iter {} Loss {:.4f} Moving Loss {:.4f} Train Loss {:.4f}".format(j+1, test_loss/(j+1), batch_loss/100, train_loss/5), flush=True)
@@ -224,9 +228,9 @@ def main():
         if "bs" in name:
             p.requires_grad = False
     
-    # optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
+    optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
     # optimizer = optim.RMSprop(commodel.parameters(), lr=5e-4)
-    optimizer = optim.Adadelta(commodel.parameters(), lr=1.0)
+    # optimizer = optim.Adadelta(commodel.parameters(), lr=1.0)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, threshold=1e-2, patience=1000, cooldown=10000, min_lr=1e-4, verbose=True)
 
     l = int(len(series)/batch_size)*batch_size
@@ -271,7 +275,10 @@ def main():
 if __name__ == "__main__":
     parser = get_argument_parser()
     FLAGS = parser.parse_args()
+    import time
+    start_time = time.time()
     main()
+    print("--- {} seconds ---".format(time.time() - start_time))
 
 
 
