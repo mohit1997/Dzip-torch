@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch import nn, optim
+import numpy as np
 
 class BootstrapNN(nn.Module):
     def __init__(self, vocab_size, emb_size, length, jump, hdim1, hdim2, n_layers, bidirectional):
@@ -49,14 +50,17 @@ class CombinedNN(nn.Module):
         self.bslin1 = bsNN.lin1
         self.bsjump = bsNN.jump
         if bsNN.bidirectional:
-            self.flin1 = nn.Linear(2*bsNN.hdim1*(length//bsNN.jump), vocab_size)
+            # self.flin1 = nn.Linear(2*bsNN.hdim1*(length//bsNN.jump), vocab_size)
             self.flat2_size = 2*bsNN.hdim1*(length//bsNN.jump) + emb_size*length
+            self.bsflin1 = bsNN.flin1
         else:
-            self.flin1 = nn.Linear(bsNN.hdim1*(length//bsNN.jump), vocab_size)
+            # self.flin1 = nn.Linear(bsNN.hdim1*(length//bsNN.jump), vocab_size)
             self.flat2_size = bsNN.hdim1*(length//bsNN.jump) + emb_size*length
+            self.bsflin1 = bsNN.flin1
 
 
-        self.flin2 = nn.Linear(bsNN.hdim2, vocab_size)
+        # self.flin2 = nn.Linear(bsNN.hdim2, vocab_size)
+        self.bsflin2 = bsNN.flin2
 
         self.hdim = hdim
         self.embedding = nn.Embedding(vocab_size, emb_size)
@@ -91,7 +95,9 @@ class CombinedNN(nn.Module):
         self.last_lin2 = nn.Linear(hdim, vocab_size)
         self.last_lin3 = nn.Linear(hdim, vocab_size)
 
-        self.final = nn.Linear(vocab_size*4, vocab_size)
+        self.weight = nn.Parameter(torch.zeros([1], dtype=torch.float32), requires_grad=True)
+
+        self.final = nn.Linear(vocab_size*3, vocab_size)
 
     def forward(self, inp):
         emb = self.bsembedding(inp)
@@ -100,7 +106,7 @@ class CombinedNN(nn.Module):
         batch_size = slicedoutput.size()[0]
         flat = slicedoutput.contiguous().view(batch_size, -1)
         prelogits = x = self.bslin1(flat)
-        new_logits = self.flin1(flat) + self.flin2(x)
+        new_logits = self.bsflin1(flat) + self.bsflin2(x)
         out = F.log_softmax(new_logits, dim=1)
 
         emb = self.embedding(inp)
@@ -115,7 +121,9 @@ class CombinedNN(nn.Module):
 
         e = self.layer2(flat2)
 
-        next_layer = torch.cat((self.last_lin1(flat2), self.last_lin2(d), self.last_lin3(e), new_logits), 1)
-        final_logits = self.final(next_layer)
+        next_layer = torch.cat((self.last_lin1(flat2), self.last_lin2(d), self.last_lin3(e)), 1)
+        # print(self.weight, 1- self.weight, self.final(next_layer))
+        pred = self.final(next_layer)
+        final_logits = torch.sigmoid(self.weight) * pred + (1 - torch.sigmoid(self.weight)) * new_logits
         out = F.log_softmax(final_logits, dim=1)
-        return out
+        return out, F.log_softmax(pred, dim=1)
