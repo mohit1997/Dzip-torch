@@ -96,6 +96,7 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
         cumul = np.zeros((bs, vocab_size+1), dtype = np.uint64)
 
         start_ind = ((num_iters - timesteps) // block_len)*block_len
+        ind = np.array(range(bs))*num_iters + start_ind
         for j in (range(start_ind, num_iters - timesteps)):
             bx = Variable(torch.from_numpy(X[ind,:])).to(device)
             by = Variable(torch.from_numpy(Y[ind])).to(device)
