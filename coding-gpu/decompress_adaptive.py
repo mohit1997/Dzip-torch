@@ -13,6 +13,7 @@ import tempfile
 import argparse
 import arithmeticcoding_fast
 import struct
+import time
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -48,6 +49,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
         block_len = 20
         test_loss = 0
         batch_loss = 0
+        start_time = time.time()
         for j in (range(num_iters - timesteps)):
             # Write Code for probability extraction
             bx = Variable(torch.from_numpy(series_2d[:,j:j+timesteps])).to(device)
@@ -67,8 +69,15 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
 
             if (j+1) % 100 == 0:
                 print("Iter {} Loss {:.4f} Moving Loss {:.4f}".format(j+1, test_loss/(j+1), batch_loss/100), flush=True)
+                print("{} secs".format(time.time() - start_time))
                 batch_loss = 0
+                start_time = time.time()
 
+            # if (j+1) % 101 == 0:
+            #     for i in range(bs):
+            #         bitin[i].close()
+            #         f[i].close()
+            #     return
             if (j+1) % block_len == 0:
                 model.train()
                 optimizer.zero_grad()

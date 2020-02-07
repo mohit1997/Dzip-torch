@@ -222,7 +222,7 @@ def main():
     if l < len(series)-timesteps:
         compress(model, X[l:], Y[l:], 1, vocab_size, timesteps, device, final_step = True)
     else:
-        f = open(args.temp_file_prefix+'.last','wb')
+        f = open(FLAGS.temp_file_prefix+'.last','wb')
         bitout = arithmeticcoding_fast.BitOutputStream(f)
         enc = arithmeticcoding_fast.ArithmeticEncoder(32, bitout) 
         prob = np.ones(vocab_size)/vocab_size

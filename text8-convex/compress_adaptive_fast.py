@@ -44,16 +44,17 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
             for j in range(min(timesteps, num_iters)):
                 enc[i].write(cumul, X[ind[i],j])
 
+        block_len = 20
 
-        cumul = np.zeros((bs*20, vocab_size+1), dtype = np.uint64)
+        cumul = np.zeros((bs*block_len, vocab_size+1), dtype = np.uint64)
 
         test_loss = 0
         batch_loss = 0
         train_loss = 0
         for j in (range(num_iters - timesteps)):
             # Write Code for probability extraction
-            if (j+1) % 20 == 0:
-                indices = np.concatenate([ind - p for p in range(20)], axis=0)
+            if (j+1) % block_len == 0:
+                indices = np.concatenate([ind - p for p in range(block_len-1, -1, -1)], axis=0)
 
                 bx = Variable(torch.from_numpy(X[indices,:])).to(device)
                 by = Variable(torch.from_numpy(Y[indices])).to(device)
@@ -62,21 +63,21 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
                     model.eval()
                     pred, _ = model(bx)
                     loss = loss_function(pred, by)
-                    test_loss += loss.item()*20
-                    batch_loss += loss.item()*20
+                    test_loss += loss.item()*block_len
+                    batch_loss += loss.item()*block_len
                     prob = torch.exp(pred).detach().cpu().numpy()
                 cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
                 for i in range(bs):
-                    for s in range(20):
+                    for s in range(block_len):
                         enc[i].write(cumul[i + bs*s,:], Y[indices[i + bs*s]])
             
             if (j+1)%100 == 0:
-                print("Iter {} Loss {:.4f} Moving Loss {:.4f} Train Loss {:.4f}".format(j+1, test_loss/(j+1), batch_loss/100, train_loss/5), flush=True)
+                print("Iter {} Loss {:.4f} Moving Loss {:.4f} Train Loss {:.4f}".format(j+1, test_loss/(j+1), batch_loss/100, train_loss/100), flush=True)
                 batch_loss = 0
                 train_loss = 0
 
-            if (j+1) % 20 == 0:
-                indices = np.concatenate([ind - p for p in range(20)], axis=0)
+            if (j+1) % block_len == 0:
+                indices = np.concatenate([ind - p for p in range(block_len)], axis=0)
 
                 bx = Variable(torch.from_numpy(X[indices,:])).to(device)
                 by = Variable(torch.from_numpy(Y[indices])).to(device)
@@ -85,11 +86,32 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
                 pred1, pred2 = model(bx)
                 loss2 = loss_function(pred2, by)
                 loss = loss_function(pred1, by) + loss2
-                train_loss += loss2.item()
+                train_loss += loss2.item()*block_len
                 loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 5)
                 optimizer.step()
             
+            ind = ind + 1
+
+        cumul = np.zeros((bs, vocab_size+1), dtype = np.uint64)
+
+        start_ind = ((num_iters - timesteps) // block_len)*block_len
+        ind = np.array(range(bs))*num_iters + start_ind
+        for j in (range(start_ind, num_iters - timesteps)):
+            bx = Variable(torch.from_numpy(X[ind,:])).to(device)
+            by = Variable(torch.from_numpy(Y[ind])).to(device)
+            # print(X[ind, :])
+            with torch.no_grad():
+                model.eval()
+                pred, _ = model(bx)
+                loss = loss_function(pred, by)
+                test_loss += loss.item()
+                batch_loss += loss.item()
+                prob = torch.exp(pred).detach().cpu().numpy()
+            cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
+            for i in range(bs):
+                enc[i].write(cumul[i,:], Y[ind[i]])
+
             ind = ind + 1
 
         # close files
@@ -182,7 +204,7 @@ def main():
     params['bs'] = batch_size
     params['timesteps'] = timesteps
 
-    with open(FLAGS.file_name+'.params','w') as f:
+    with open(FLAGS.output+'.params','w') as f:
         json.dump(params, f, indent=4)
 
 

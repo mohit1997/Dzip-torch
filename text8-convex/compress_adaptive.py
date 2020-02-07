@@ -14,6 +14,7 @@ import argparse
 import arithmeticcoding_fast
 import struct
 import shutil
+import time
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -50,6 +51,7 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
         test_loss = 0
         batch_loss = 0
         train_loss = 0
+        start_time = time.time()
         for j in (range(num_iters - timesteps)):
             # Write Code for probability extraction
             bx = Variable(torch.from_numpy(X[ind,:])).to(device)
@@ -67,9 +69,11 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
                 enc[i].write(cumul[i,:], Y[ind[i]])
             
             if (j+1)%100 == 0:
+                print("{} secs".format(time.time() - start_time))
                 print("Iter {} Loss {:.4f} Moving Loss {:.4f} Train Loss {:.4f}".format(j+1, test_loss/(j+1), batch_loss/100, train_loss/5), flush=True)
                 batch_loss = 0
                 train_loss = 0
+                start_time = time.time()
 
             if (j+1) % 20 == 0:
                 indices = np.concatenate([ind - p for p in range(20)], axis=0)
@@ -161,7 +165,7 @@ def main():
     use_cuda = use_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    sequence = np.load(FLAGS.file_name + ".npy")
+    sequence = np.load(FLAGS.output + ".npy")
     vocab_size = len(np.unique(sequence))
     sequence = sequence
 
@@ -224,9 +228,9 @@ def main():
         if "bs" in name:
             p.requires_grad = False
     
-    # optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
+    optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
     # optimizer = optim.RMSprop(commodel.parameters(), lr=5e-4)
-    optimizer = optim.Adadelta(commodel.parameters(), lr=1.0)
+    # optimizer = optim.Adadelta(commodel.parameters(), lr=1.0)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, threshold=1e-2, patience=1000, cooldown=10000, min_lr=1e-4, verbose=True)
 
     l = int(len(series)/batch_size)*batch_size
