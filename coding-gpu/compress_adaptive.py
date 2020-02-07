@@ -129,7 +129,7 @@ def get_argument_parser():
                         help='GPU to use')
     parser.add_argument('--output', type=str, default='comp',
                         help='Name of the output file')
-    parser.add_argument('--timesteps', type=str, default='64',
+    parser.add_argument('--timesteps', type=int, default='64',
                         help='Number of timesteps')
     # parser.add_argument('--params', type=str, default='params_xor10_small',
     #                     help='Name of the output file')

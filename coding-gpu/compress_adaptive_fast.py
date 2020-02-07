@@ -149,7 +149,7 @@ def get_argument_parser():
                         help='The name of the input file')
     parser.add_argument('--gpu', type=str, default='0',
                         help='GPU to use')
-    parser.add_argument('--timesteps', type=str, default='64',
+    parser.add_argument('--timesteps', type=int, default='64',
                         help='Number of timesteps')
     parser.add_argument('--output', type=str, default='comp',
                         help='Name of the output file')
@@ -195,6 +195,7 @@ def main():
 
     sequence = sequence.reshape(-1)
     series = sequence.copy()
+
     data = strided_app(series, timesteps+1, 1)
     X = data[:, :-1]
     Y = data[:, -1]
@@ -303,7 +304,3 @@ if __name__ == "__main__":
     start_time = time.time()
     main()
     print("--- {} seconds ---".format(time.time() - start_time))
-
-
-
-
