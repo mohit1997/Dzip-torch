@@ -140,6 +140,8 @@ def get_argument_parser():
                         help='GPU to use')
     parser.add_argument('--output', type=str, default='comp',
                         help='Name of the output file')
+    parser.add_argument('--timesteps', type=str, default='64',
+                        help='Number of timesteps')
     return parser
 
 
@@ -157,7 +159,7 @@ def main():
     os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
 
     batch_size=512
-    timesteps=64
+    timesteps=FLAGS.timesteps
     use_cuda = True
 
     with open("params_"+ FLAGS.file_name, 'r') as f:

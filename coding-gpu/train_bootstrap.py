@@ -91,7 +91,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
 num_epochs=FLAGS.epochs
 
 batch_size=2048
-timesteps=64
+timesteps=FLAGS.timesteps
 use_cuda = True
 
 use_cuda = use_cuda and torch.cuda.is_available()
