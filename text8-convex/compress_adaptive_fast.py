@@ -134,7 +134,8 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
             bx = Variable(torch.from_numpy(X[i:i+1,:])).to(device)
             with torch.no_grad():
                 model.eval()
-                prob = torch.exp(model(bx)).detach().cpu().numpy()
+                pred, _ = model(bx)
+                prob = torch.exp(pred).detach().cpu().numpy()
             cumul[1:] = np.cumsum(prob*10000000 + 1)
             enc.write(cumul, Y[i])
         enc.finish()

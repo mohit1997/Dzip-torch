@@ -115,7 +115,8 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
             bx = Variable(torch.from_numpy(series[i:i+timesteps].reshape(1,-1))).to(device)
             with torch.no_grad():
                 model.eval()
-                prob = torch.exp(model(bx)).detach().cpu().numpy()
+                pred, _ = model(bx)
+                prob = torch.exp(pred).detach().cpu().numpy()
             cumul[1:] = np.cumsum(prob*10000000 + 1)
             series[i+timesteps] = dec.read(cumul, vocab_size)
         bitin.close()
