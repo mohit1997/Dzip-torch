@@ -25,6 +25,24 @@ source torch/bin/activate
 bash install.sh
 ```
 
+##### ENCODING-DECODING (uses cpu and slower)
+<!-- 1. Go to [encode-decode](./encode-decode)
+2. Place the parsed files in the directory files_to_be_compressed.
+3. Run the following command -->
+
+```bash 
+cd coding-gpu
+# Compress using the combined model (default usage of DZip)
+bash compress.sh FILE.txt FILE.dzip com
+# Compress using only the bootstrap model
+bash compress.sh FILE.txt FILE.dzip bs
+# Decompress using combined model (Only if compressed using combined mode)
+bash decompress.sh FILE.dzip decom_FILE com MODEL_PATH
+# Decompress using bootstrap model (Only if compressed using bs mode)
+bash decompress.sh FILE.dzip decom_FILE bs MODEL_PATH
+# Verify successful decompression
+bash compare.sh FILE.txt decom_FILE
+```
 
 ## Links to the Datasets and Trained Boostrap Models
 | File | Link |Bootstrap Model|
