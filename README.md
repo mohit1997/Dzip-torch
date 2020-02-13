@@ -25,11 +25,7 @@ source torch/bin/activate
 bash install.sh
 ```
 
-##### ENCODING-DECODING (uses cpu and slower)
-<!-- 1. Go to [encode-decode](./encode-decode)
-2. Place the parsed files in the directory files_to_be_compressed.
-3. Run the following command -->
-
+##### ENCODING-DECODING
 ```bash 
 cd coding-gpu
 # Compress using the combined model (default usage of DZip)
