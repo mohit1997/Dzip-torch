@@ -26,7 +26,7 @@ bash install.sh
 ```
 
 
-## Links to the Datasets
+## Links to the Datasets and Trained Boostrap Models
 | File | Link |Bootstrap Model|
 |------|------|------|
 |webster|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[webster](./Models/webster_bstrap)|
