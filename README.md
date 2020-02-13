@@ -24,3 +24,33 @@ python3 -m venv torch
 source torch/bin/activate
 bash install.sh
 ```
+
+
+## Links to the Datasets
+| File | Link |
+|------|------|
+|webster|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|
+|mozilla|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|
+|h. chr20|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr20.fa.gz|
+|h. chr1|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr1.fa.gz|
+|c.e. genome|ftp://ftp.ensembl.org/pub/release-97/fasta/caenorhabditis_elegans/dna/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz|
+|ill-quality|http://bix.ucsd.edu/projects/singlecell/nbt_data.html|
+|text8|http://www.mattmahoney.net/dc/textdata.html|
+|enwiki9|http://www.mattmahoney.net/dc/textdata.html|
+|np-bases|https://github.com/nanopore-wgs-consortium/NA12878|
+|np-quality|https://github.com/nanopore-wgs-consortium/NA12878|
+
+##
+1. Go to [Datasets](./Datasets)
+2. For real datasets, run
+```bash
+bash get_data.sh
+```
+3. For synthetic datasets, run
+```bash
+# For generating XOR-10 dataset
+python generate_data.py --data_type 0entropy --markovity 10 --file_name files_to_be_compressed/xor10.txt
+# For generating HMM-10 dataset
+python generate_data.py --data_type HMM --markovity 10 --file_name files_to_be_compressed/hmm10.txt
+```
+4. This will generate a folder named `files_to_be_compressed`. This folder contains the parsed files which can be used to recreate the results in our paper.
