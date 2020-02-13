@@ -152,6 +152,8 @@ def get_argument_parser():
                         help='GPU to use')
     parser.add_argument('--timesteps', type=int, default='64',
                         help='Number of timesteps')
+    parser.add_argument('--bs', type=int, default='64',
+                        help='Batch Size')
     parser.add_argument('--output', type=str, default='comp',
                         help='Name of the output file')
     # parser.add_argument('--params', type=str, default='params_xor10_small',
@@ -172,7 +174,7 @@ def var_int_encode(byte_str_len, f):
 def main():
     os.environ["CUDA_VISIBLE_DEVICES"]=FLAGS.gpu
 
-    batch_size=64
+    batch_size=FLAGS.bs
     timesteps=FLAGS.timesteps
     use_cuda = True
 

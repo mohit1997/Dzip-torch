@@ -121,7 +121,7 @@ if vocab_size >= 1 and vocab_size <=3:
     dic['hdim1'] = 8
     dic['hdim2'] = 16
   
-if vocab_size >= 4 and vocab_size <=8:
+if vocab_size >= 4 and vocab_size <=9:
     dic['hdim1'] = 32
     dic['hdim2'] = 16
 
