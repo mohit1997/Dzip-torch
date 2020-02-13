@@ -5,7 +5,7 @@
 DZip is a general lossless compressor for sequential data which uses NN-based modelling combined with arithmetic coding. We refer to the NN-based model as the "combined model", as it is composed of a bootstrap model and a supporter model. The bootstrap model is trained prior to compression on the data to be compressed, and the resulting model parameters (weights) are stored as part of the compressed output (after being losslessly compressed with BSC). The combined model is adaptively trained (bootstrap model parameters are fixed) while compressing the data, and hence its parameters do not need to be stored as part of the compressed output.
 
 ## Requirements
-0. GPU
+0. GPU (Cuda 9.0+)
 1. Python3 (<= 3.6.8)
 2. Numpy
 3. Sklearn
@@ -25,6 +25,24 @@ source torch/bin/activate
 bash install.sh
 ```
 
+##### ENCODING-DECODING (uses cpu and slower)
+<!-- 1. Go to [encode-decode](./encode-decode)
+2. Place the parsed files in the directory files_to_be_compressed.
+3. Run the following command -->
+
+```bash 
+cd coding-gpu
+# Compress using the combined model (default usage of DZip)
+bash compress.sh FILE.txt FILE.dzip com
+# Compress using only the bootstrap model
+bash compress.sh FILE.txt FILE.dzip bs
+# Decompress using combined model (Only if compressed using combined mode)
+bash decompress.sh FILE.dzip decom_FILE com MODEL_PATH
+# Decompress using bootstrap model (Only if compressed using bs mode)
+bash decompress.sh FILE.dzip decom_FILE bs MODEL_PATH
+# Verify successful decompression
+bash compare.sh FILE.txt decom_FILE
+```
 
 ## Links to the Datasets and Trained Boostrap Models
 | File | Link |Bootstrap Model|
