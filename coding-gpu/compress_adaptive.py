@@ -187,7 +187,7 @@ def main():
     params['bs'] = batch_size
     params['timesteps'] = timesteps
 
-    with open(FLAGS.file_name+'.params','w') as f:
+    with open(FLAGS.output+'.params','w') as f:
         json.dump(params, f, indent=4)
 
 
