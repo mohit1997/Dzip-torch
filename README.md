@@ -30,15 +30,15 @@ bash install.sh
 | File | Link |Bootstrap Model|
 |------|------|------|
 |webster|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[webster](./Models/webster_bstrap)|
-|mozilla|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[webster](./Models/webster_bstrap)|
-|h. chr20|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr20.fa.gz|[webster](./Models/webster_bstrap)|
-|h. chr1|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr1.fa.gz|[webster](./Models/webster_bstrap)|
-|c.e. genome|ftp://ftp.ensembl.org/pub/release-97/fasta/caenorhabditis_elegans/dna/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz|[webster](./Models/webster_bstrap)|
-|ill-quality|http://bix.ucsd.edu/projects/singlecell/nbt_data.html|[webster](./Models/webster_bstrap)|
-|text8|http://www.mattmahoney.net/dc/textdata.html|[webster](./Models/webster_bstrap)|
-|enwiki9|http://www.mattmahoney.net/dc/textdata.html|[webster](./Models/webster_bstrap)|
-|np-bases|https://github.com/nanopore-wgs-consortium/NA12878|[webster](./Models/webster_bstrap)|
-|np-quality|https://github.com/nanopore-wgs-consortium/NA12878|[webster](./Models/webster_bstrap)|
+|mozilla|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[mozilla](./Models/mozilla_bstrap)|
+|h. chr20|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr20.fa.gz|[chr20](./Models/chr20_bstrap)|
+|h. chr1|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr1.fa.gz|[chr1](./Models/chr1_bstrap)|
+|c.e. genome|ftp://ftp.ensembl.org/pub/release-97/fasta/caenorhabditis_elegans/dna/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz|[celegchr](./Models/celegchr_bstrap)|
+|ill-quality|http://bix.ucsd.edu/projects/singlecell/nbt_data.html|[phixq](./Models/phixq_truncated_bstrap)|
+|text8|http://www.mattmahoney.net/dc/textdata.html|[text8](./Models/text8_bstrap)|
+|enwiki9|http://www.mattmahoney.net/dc/textdata.html|[enwiki9](./Models/enwik9_bstrap)|
+|np-bases|https://github.com/nanopore-wgs-consortium/NA12878|[npbases](./Models/npbases_bstrap)|
+|np-quality|https://github.com/nanopore-wgs-consortium/NA12878|[npquals](./Models/npquals_bstrap)|
 
 ##
 1. Go to [Datasets](./Datasets)
