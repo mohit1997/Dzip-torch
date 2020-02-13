@@ -27,18 +27,18 @@ bash install.sh
 
 
 ## Links to the Datasets
-| File | Link |
-|------|------|
-|webster|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|
-|mozilla|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|
-|h. chr20|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr20.fa.gz|
-|h. chr1|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr1.fa.gz|
-|c.e. genome|ftp://ftp.ensembl.org/pub/release-97/fasta/caenorhabditis_elegans/dna/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz|
-|ill-quality|http://bix.ucsd.edu/projects/singlecell/nbt_data.html|
-|text8|http://www.mattmahoney.net/dc/textdata.html|
-|enwiki9|http://www.mattmahoney.net/dc/textdata.html|
-|np-bases|https://github.com/nanopore-wgs-consortium/NA12878|
-|np-quality|https://github.com/nanopore-wgs-consortium/NA12878|
+| File | Link |Bootstrap Model|
+|------|------|------|
+|webster|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[webster](./Models/webster_bstrap)|
+|mozilla|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[webster](./Models/webster_bstrap)|
+|h. chr20|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr20.fa.gz|[webster](./Models/webster_bstrap)|
+|h. chr1|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr1.fa.gz|[webster](./Models/webster_bstrap)|
+|c.e. genome|ftp://ftp.ensembl.org/pub/release-97/fasta/caenorhabditis_elegans/dna/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz|[webster](./Models/webster_bstrap)|
+|ill-quality|http://bix.ucsd.edu/projects/singlecell/nbt_data.html|[webster](./Models/webster_bstrap)|
+|text8|http://www.mattmahoney.net/dc/textdata.html|[webster](./Models/webster_bstrap)|
+|enwiki9|http://www.mattmahoney.net/dc/textdata.html|[webster](./Models/webster_bstrap)|
+|np-bases|https://github.com/nanopore-wgs-consortium/NA12878|[webster](./Models/webster_bstrap)|
+|np-quality|https://github.com/nanopore-wgs-consortium/NA12878|[webster](./Models/webster_bstrap)|
 
 ##
 1. Go to [Datasets](./Datasets)
