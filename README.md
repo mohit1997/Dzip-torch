@@ -5,7 +5,7 @@
 DZip is a general lossless compressor for sequential data which uses NN-based modelling combined with arithmetic coding. We refer to the NN-based model as the "combined model", as it is composed of a bootstrap model and a supporter model. The bootstrap model is trained prior to compression on the data to be compressed, and the resulting model parameters (weights) are stored as part of the compressed output (after being losslessly compressed with BSC). The combined model is adaptively trained (bootstrap model parameters are fixed) while compressing the data, and hence its parameters do not need to be stored as part of the compressed output.
 
 ## Requirements
-0. GPU
+0. GPU (Cuda 9.0+)
 1. Python3 (<= 3.6.8)
 2. Numpy
 3. Sklearn
