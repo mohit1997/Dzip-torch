@@ -250,7 +250,12 @@ def main():
         bitin.close() 
         f.close()
     
-    np.save(FLAGS.output, series)
+    # np.save(FLAGS.output, series)
+    f = open(FLAGS.output,'w')
+    print(id2char_dict)
+    print(series[:10])
+    f.write(''.join([id2char_dict[str(s)] for s in series]))
+    f.close()
 
     print("Done")
     

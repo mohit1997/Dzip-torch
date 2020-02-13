@@ -235,10 +235,12 @@ def main():
         bitin.close() 
         f.close()
     
-    np.save(FLAGS.output, series)
-    a = np.load('xor10_small.npy')
-    print("Decompressed file is same? {}".format(np.array_equal(a,series)))
-    print("Done")
+    # np.save(FLAGS.output, series)
+    f = open(FLAGS.output,'w')
+    print(id2char_dict)
+    print(series[:10])
+    f.write(''.join([id2char_dict[str(s)] for s in series]))
+    f.close()
     
 
 
