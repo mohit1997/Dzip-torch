@@ -10,6 +10,6 @@ MODEL_PATH=$4
 if [ "$mode" = com ] ; then
 	python decompress_adaptive.py --file_name $BASE --output $OUTPUT --model_weights_path $MODEL_PATH
 elif [ "$mode" = bs ] ; then
-	python decompress_bootstrap.py --filename $BASE --output $OUTPUT --model_weights_path $MODEL_PATH
+	python decompress_bootstrap.py --file_name $BASE --output $OUTPUT --model_weights_path $MODEL_PATH
 fi
 
