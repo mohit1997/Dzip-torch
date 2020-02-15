@@ -12,10 +12,6 @@ DZip is a general lossless compressor for sequential data which uses NN-based mo
 
 
 ### Download and install dependencies
-Download:
-```bash
-git clone https://github.com/mohit1997/Dzip-torch.git
-```
 To set up virtual environment and dependencies (on Linux):
 ```bash
 cd DZip
