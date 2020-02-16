@@ -24,9 +24,9 @@ bash install.sh
 ```bash 
 cd coding-gpu
 # Compress using the combined model (default usage of DZip)
-bash compress.sh FILE.txt FILE.dzip com
+bash compress.sh FILE.txt FILE.dzip com MODEL_PATH
 # Compress using only the bootstrap model
-bash compress.sh FILE.txt FILE.dzip bs
+bash compress.sh FILE.txt FILE.dzip bs MODEL_PATH
 # Decompress using combined model (Only if compressed using combined mode)
 bash decompress.sh FILE.dzip decom_FILE com MODEL_PATH
 # Decompress using bootstrap model (Only if compressed using bs mode)
