@@ -130,6 +130,8 @@ def get_argument_parser():
                         help='GPU to use')
     parser.add_argument('--output', type=str, default='comp',
                         help='Name of the output file')
+    parser.add_argument('--model_weights_path', type=str, default='file_bstrap',
+                        help='Path to model parameters')
     parser.add_argument('--timesteps', type=int, default='64',
                         help='Number of timesteps')
     parser.add_argument('--bs', type=int, default='64',
@@ -162,7 +164,8 @@ def main():
         params = json.load(f)
 
     FLAGS.temp_dir = 'temp'
-    os.system("rm -r {}".format(FLAGS.temp_dir))
+    if os.path.exists(FLAGS.temp_dir):
+        os.system("rm -r {}".format(FLAGS.temp_dir))
     FLAGS.temp_file_prefix = FLAGS.temp_dir + "/compressed"
     if not os.path.exists(FLAGS.temp_dir):
         os.makedirs(FLAGS.temp_dir)
@@ -225,7 +228,7 @@ def main():
         comdic['hdim'] = 2048
 
     bsmodel = BootstrapNN(**bsdic).to(device)
-    bsmodel.load_state_dict(torch.load(FLAGS.file_name +"_bstrap"))
+    bsmodel.load_state_dict(torch.load(FLAGS.model_weights_path))
     comdic['bsNN'] = bsmodel
     commodel = CombinedNN(**comdic).to(device)
     
@@ -273,7 +276,7 @@ def main():
     f.write(byte_str)
     f_in.close()
     f.close()
-    shutil.rmtree(FLAGS.temp_dir)
+    shutil.rmtree('temp')
     print("Done")
 
 

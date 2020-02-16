@@ -14,6 +14,7 @@ import argparse
 import arithmeticcoding_fast
 import struct
 import time
+import shutil
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -153,6 +154,8 @@ def main():
     use_cuda = True
 
     FLAGS.temp_dir = 'temp'
+    if os.path.exists(FLAGS.temp_dir):
+        shutil.rmtree('temp')
     FLAGS.temp_file_prefix = FLAGS.temp_dir + "/compressed"
     if not os.path.exists(FLAGS.temp_dir):
         os.makedirs(FLAGS.temp_dir)
@@ -251,12 +254,13 @@ def main():
         f.close()
     
     # np.save(FLAGS.output, series)
-    f = open(FLAGS.output,'w')
-    print(id2char_dict)
-    print(series[:10])
-    f.write(''.join([id2char_dict[str(s)] for s in series]))
+    f = open(FLAGS.output,'wb')
+    # print(id2char_dict)
+    # print(series[:10])
+    f.write(bytearray([id2char_dict[str(s)] for s in series]))
     f.close()
 
+    shutil.rmtree('temp')
     print("Done")
     
 

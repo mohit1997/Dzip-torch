@@ -81,6 +81,8 @@ def get_argument_parser():
                         help='Name for the log file')
     parser.add_argument('--epochs', type=int, default='8',
                         help='Num of epochs')
+    parser.add_argument('--model_weights_path', type=str, default='file_bstrap',
+                        help='Path to model parameters')
     parser.add_argument('--timesteps', type=int, default='64',
                         help='Num of time steps')
     return parser
@@ -148,7 +150,7 @@ epoch_loss = 1e8
 for epoch in range(num_epochs):
     lss = train(epoch+1)
     if lss < epoch_loss:
-        torch.save(model.state_dict(), FLAGS.file_name + "_bstrap")
+        torch.save(model.state_dict(), FLAGS.model_weights_path)
         print("Loss went from {:.4f} to {:.4f}".format(epoch_loss, lss))
         epoch_loss = lss
 

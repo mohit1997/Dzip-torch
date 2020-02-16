@@ -12,6 +12,8 @@ import tempfile
 import argparse
 import arithmeticcoding_fast
 import struct
+from models_torch import *
+import shutil
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -86,47 +88,6 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, final_step=
         return series
 
 
-
-
-
-class BootstrapNN(nn.Module):
-    def __init__(self, vocab_size, emb_size, length, jump, hdim1, hdim2, n_layers, bidirectional):
-        super(BootstrapNN, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, emb_size)
-        self.vocab_size = vocab_size
-        self.len = length
-        self.hdim1 = hdim1
-        self.hdim2 = hdim2
-        self.n_layers = n_layers
-        self.jump = jump
-        self.rnn_cell = nn.GRU(emb_size, hdim1, n_layers, batch_first=True, bidirectional=bidirectional)
-        
-        if bidirectional:
-            self.lin1 = nn.Sequential(
-            nn.Linear(2*hdim1*(length//jump), hdim2),
-            nn.ReLU(inplace=True)
-            )
-            self.flin1 = nn.Linear(2*hdim1*(length//jump), vocab_size)
-        else:
-            self.lin1 = nn.Sequential(
-            nn.Linear(hdim1*(length//jump), hdim2),
-            nn.ReLU(inplace=True)
-            )
-            self.flin1 = nn.Linear(hdim1*(length//jump), vocab_size)
-        self.flin2 = nn.Linear(hdim2, vocab_size)
-
-    def forward(self, inp):
-        emb = self.embedding(inp)
-        output, hidden = self.rnn_cell(emb)
-        slicedoutput = torch.flip(output, [2])[:,::self.jump,:]
-        batch_size = slicedoutput.size()[0]
-        flat = slicedoutput.contiguous().view(batch_size, -1)
-        prelogits = x = self.lin1(flat)
-        x = self.flin1(flat) + self.flin2(x)
-        out = F.log_softmax(x, dim=1)
-
-        return out
-
 def get_argument_parser():
     parser = argparse.ArgumentParser();
     parser.add_argument('--file_name', type=str, default='xor10_comp',
@@ -157,6 +118,8 @@ def main():
     use_cuda = True
 
     FLAGS.temp_dir = 'temp'
+    if os.path.exists(FLAGS.temp_dir):
+        os.system("rm -r {}".format(FLAGS.temp_dir))
     FLAGS.temp_file_prefix = FLAGS.temp_dir + "/compressed"
     if not os.path.exists(FLAGS.temp_dir):
         os.makedirs(FLAGS.temp_dir)
@@ -236,12 +199,11 @@ def main():
         f.close()
     
     # np.save(FLAGS.output, series)
-    f = open(FLAGS.output,'w')
-    print(id2char_dict)
-    print(series[:10])
-    f.write(''.join([id2char_dict[str(s)] for s in series]))
+    f = open(FLAGS.output,'wb')
+    f.write(bytearray([id2char_dict[str(s)] for s in series]))
     f.close()
-    
+
+    shutil.rmtree('temp') 
 
 
 if __name__ == "__main__":

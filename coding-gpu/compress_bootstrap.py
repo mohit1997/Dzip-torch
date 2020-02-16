@@ -13,6 +13,7 @@ import argparse
 import arithmeticcoding_fast
 import struct
 import shutil
+from models_torch import *
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -91,47 +92,6 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, final_step=False):
     return
 
 
-
-
-
-class BootstrapNN(nn.Module):
-    def __init__(self, vocab_size, emb_size, length, jump, hdim1, hdim2, n_layers, bidirectional):
-        super(BootstrapNN, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, emb_size)
-        self.vocab_size = vocab_size
-        self.len = length
-        self.hdim1 = hdim1
-        self.hdim2 = hdim2
-        self.n_layers = n_layers
-        self.jump = jump
-        self.rnn_cell = nn.GRU(emb_size, hdim1, n_layers, batch_first=True, bidirectional=bidirectional)
-        
-        if bidirectional:
-            self.lin1 = nn.Sequential(
-            nn.Linear(2*hdim1*(length//jump), hdim2),
-            nn.ReLU(inplace=True)
-            )
-            self.flin1 = nn.Linear(2*hdim1*(length//jump), vocab_size)
-        else:
-            self.lin1 = nn.Sequential(
-            nn.Linear(hdim1*(length//jump), hdim2),
-            nn.ReLU(inplace=True)
-            )
-            self.flin1 = nn.Linear(hdim1*(length//jump), vocab_size)
-        self.flin2 = nn.Linear(hdim2, vocab_size)
-
-    def forward(self, inp):
-        emb = self.embedding(inp)
-        output, hidden = self.rnn_cell(emb)
-        slicedoutput = torch.flip(output, [2])[:,::self.jump,:]
-        batch_size = slicedoutput.size()[0]
-        flat = slicedoutput.contiguous().view(batch_size, -1)
-        prelogits = x = self.lin1(flat)
-        x = self.flin1(flat) + self.flin2(x)
-        out = F.log_softmax(x, dim=1)
-
-        return out
-
 def get_argument_parser():
     parser = argparse.ArgumentParser();
     parser.add_argument('--file_name', type=str, default='xor10_small',
@@ -140,6 +100,8 @@ def get_argument_parser():
                         help='GPU to use')
     parser.add_argument('--output', type=str, default='comp',
                         help='Name of the output file')
+    parser.add_argument('--model_weights_path', type=str, default='file_bstrap',
+                        help='Path to model parameters')
     parser.add_argument('--timesteps', type=int, default='64',
                         help='Number of timesteps')
     return parser
@@ -166,6 +128,8 @@ def main():
         params = json.load(f)
 
     FLAGS.temp_dir = 'temp'
+    if os.path.exists(FLAGS.temp_dir):
+        os.system("rm -r {}".format(FLAGS.temp_dir))
     FLAGS.temp_file_prefix = FLAGS.temp_dir + "/compressed"
     if not os.path.exists(FLAGS.temp_dir):
         os.makedirs(FLAGS.temp_dir)
@@ -216,7 +180,7 @@ def main():
         bsdic['emb_size'] = 16
 
     model = BootstrapNN(**bsdic).to(device)
-    model.load_state_dict(torch.load(FLAGS.file_name + "_bstrap"))
+    model.load_state_dict(torch.load(FLAGS.model_weights_path))
 
     l = int(len(series)/batch_size)*batch_size
     
@@ -255,7 +219,7 @@ def main():
     f.write(byte_str)
     f_in.close()
     f.close()
-    shutil.rmtree(FLAGS.temp_dir)
+    shutil.rmtree('temp')
 
 
 if __name__ == "__main__":
