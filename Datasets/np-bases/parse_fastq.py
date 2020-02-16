@@ -69,10 +69,9 @@ base_name = 'files_to_be_compressed/np-bases'
 parser = ParseFastQ(fname)
 data = ''
 for tup in parser:
-	data += tup[1] + ' '
+    data += tup[1] + ' '
 
 data = data[:300000000]
 print("Seq Length {}".format(len(data)))
 with open("{}.txt".format(base_name), "w") as text_file:
     text_file.write(data)
-
