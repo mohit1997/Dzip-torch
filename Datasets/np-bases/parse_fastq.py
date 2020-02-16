@@ -72,7 +72,7 @@ for tup in parser:
 	data += tup[1] + ' '
 
 print("Seq Length {}".format(len(data)))
-
+data = data[:300000000]
 with open("{}.txt".format(base_name), "w") as text_file:
     text_file.write(data)
 
