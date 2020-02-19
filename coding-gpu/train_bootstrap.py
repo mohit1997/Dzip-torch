@@ -103,9 +103,8 @@ sequence = np.load(FLAGS.file_name + ".npy")
 vocab_size = len(np.unique(sequence))
 sequence = sequence
 
+# Convert data into context and target symbols
 X, Y = generate_single_output_data(sequence, batch_size, timesteps)
-X = X
-Y = Y
 
 kwargs = {'num_workers': 4, 'pin_memory': True} if use_cuda else {}
 train_dataset = CustomDL(X, Y)
@@ -119,6 +118,8 @@ dic = {'vocab_size': vocab_size, 'emb_size': 8,
         'bidirectional': True}
 
 print("Vocab Size {}".format(vocab_size))
+
+# Select Model Parameters based on Alphabet Size
 if vocab_size >= 1 and vocab_size <=3:
     dic['hdim1'] = 8
     dic['hdim2'] = 16
@@ -138,14 +139,20 @@ if vocab_size >= 128:
     dic['emb_size'] = 16
 
 print("CudNN version", torch.backends.cudnn.version())
+
+# Create Bootstrap Model
 model = BootstrapNN(**dic).to(device)
+# Apply Weight Initalization
 model.apply(weight_init)
+# Learning Rate Decay
 mul = len(Y)/5e7
 decayrate = mul/(len(Y) // batch_size)
+# Optimizer
 optimizer = optim.Adam(model.parameters(), lr=5e-3)
 fcn = lambda step: 1./(1. + decayrate*step)
 scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=fcn)
 
+# Training with Best Model Selection
 epoch_loss = 1e8
 for epoch in range(num_epochs):
     lss = train(epoch+1)

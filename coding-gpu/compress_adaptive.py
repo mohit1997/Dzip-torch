@@ -41,6 +41,7 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
         cumul = np.zeros(vocab_size+1, dtype = np.uint64)
         cumul[1:] = np.cumsum(prob*10000000 + 1)
 
+        # Encode first K symbols in each stream with uniform probabilities
         for i in range(bs):
             for j in range(min(timesteps, num_iters)):
                 enc[i].write(cumul, X[ind[i],j])
@@ -53,10 +54,10 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
         train_loss = 0
         start_time = time.time()
         for j in (range(num_iters - timesteps)):
-            # Write Code for probability extraction
+            # Create Batches
             bx = Variable(torch.from_numpy(X[ind,:])).to(device)
             by = Variable(torch.from_numpy(Y[ind])).to(device)
-            # print(X[ind, :])
+
             with torch.no_grad():
                 model.eval()
                 pred, _ = model(bx)
@@ -65,6 +66,8 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
                 batch_loss += loss.item()
                 prob = torch.exp(pred).detach().cpu().numpy()
             cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
+
+            # Encode with Arithmetic Encoder
             for i in range(bs):
                 enc[i].write(cumul[i,:], Y[ind[i]])
             
@@ -75,6 +78,7 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, optimizer, schedule
                 train_loss = 0
                 start_time = time.time()
 
+            # Update Parameters of Combined Model
             if (j+1) % 20 == 0:
                 indices = np.concatenate([ind - p for p in range(20)], axis=0)
 
@@ -179,12 +183,11 @@ def main():
 
     sequence = sequence.reshape(-1)
     series = sequence.copy()
+    # Convert data into context and target symbols
     data = strided_app(series, timesteps+1, 1)
     X = data[:, :-1]
     Y = data[:, -1]
     print("array type", X.dtype)
-    # X = X.astype('int')
-    # Y = Y.astype('int')
 
     params['len_series'] = len(series)
     params['bs'] = batch_size
@@ -201,6 +204,7 @@ def main():
     comdic = {'vocab_size': vocab_size, 'emb_size': 32,
         'length': timesteps, 'hdim': 8}
 
+    # Select Model Parameters based on Alphabet Size
     if vocab_size >= 1 and vocab_size <=3:
         bsdic['hdim1'] = 8
         bsdic['hdim2'] = 16
@@ -227,15 +231,19 @@ def main():
         comdic['emb_size'] = 32
         comdic['hdim'] = 2048
 
+
+    # Define Model and load bootstrap weights
     bsmodel = BootstrapNN(**bsdic).to(device)
     bsmodel.load_state_dict(torch.load(FLAGS.model_weights_path))
     comdic['bsNN'] = bsmodel
     commodel = CombinedNN(**comdic).to(device)
     
+    # Freeze Bootstrap Weights
     for name, p in commodel.named_parameters():
         if "bs" in name:
             p.requires_grad = False
     
+    # Optimizer
     optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
     # optimizer = optim.RMSprop(commodel.parameters(), lr=5e-4)
     # optimizer = optim.Adadelta(commodel.parameters(), lr=1.0)

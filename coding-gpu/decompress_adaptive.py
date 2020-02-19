@@ -41,6 +41,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
         cumul = np.zeros(vocab_size+1, dtype = np.uint64)
         cumul[1:] = np.cumsum(prob*10000000 + 1)
 
+        # Decode first K symbols in each stream with uniform probabilities
         for i in range(bs):
             for j in range(min(timesteps, num_iters)):
                 series_2d[i,j] = dec[i].read(cumul, vocab_size)
@@ -52,17 +53,19 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
         batch_loss = 0
         start_time = time.time()
         for j in (range(num_iters - timesteps)):
-            # Write Code for probability extraction
+            # Create Batch
             bx = Variable(torch.from_numpy(series_2d[:,j:j+timesteps])).to(device)
-            # print(series_2d[:, j:j+timesteps])
+            
             with torch.no_grad():
                 model.eval()
                 pred, _ = model(bx)
                 prob = torch.exp(pred).detach().cpu().numpy()
             cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
+
+            # Decode with Arithmetic Encoder
             for i in range(bs):
                 series_2d[i,j+timesteps] = dec[i].read(cumul[i,:], vocab_size)
-                # print("decoded", series_2d[i,j+timesteps])
+            
             by = Variable(torch.from_numpy(series_2d[:, j+timesteps])).to(device)
             loss = loss_function(pred, by)
             test_loss += loss.item()
@@ -74,11 +77,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, optimizer, 
                 batch_loss = 0
                 start_time = time.time()
 
-            # if (j+1) % 101 == 0:
-            #     for i in range(bs):
-            #         bitin[i].close()
-            #         f[i].close()
-            #     return
+            # Update Parameters of Combined Model
             if (j+1) % block_len == 0:
                 model.train()
                 optimizer.zero_grad()
@@ -170,6 +169,7 @@ def main():
     id2char_dict = params['id2char_dict']
     vocab_size = len(id2char_dict)
 
+    # Break into multiple streams
     f = open(FLAGS.file_name+'.combined','rb')
     for i in range(batch_size):
         f_out = open(FLAGS.temp_file_prefix+'.'+str(i),'wb')
@@ -197,6 +197,8 @@ def main():
     comdic = {'vocab_size': vocab_size, 'emb_size': 32,
         'length': timesteps, 'hdim': 8}
 
+
+    # Select Model Parameters based on Alphabet Size
     if vocab_size >= 1 and vocab_size <=3:
         bsdic['hdim1'] = 8
         bsdic['hdim2'] = 16
@@ -223,15 +225,19 @@ def main():
         comdic['emb_size'] = 32
         comdic['hdim'] = 2048
 
+
+    # Define Model and load bootstrap weights
     bsmodel = BootstrapNN(**bsdic).to(device)
     bsmodel.load_state_dict(torch.load(FLAGS.model_weights_path))
     comdic['bsNN'] = bsmodel
     commodel = CombinedNN(**comdic).to(device)
     
+    # Freeze Bootstrap Weights
     for name, p in commodel.named_parameters():
         if "bs" in name:
             p.requires_grad = False
     
+    # Optimizer
     optimizer = optim.Adam(commodel.parameters(), lr=5e-4, betas=(0.0, 0.999))
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, threshold=1e-2, patience=1000, cooldown=10000, min_lr=1e-4, verbose=True)
     l = int(len(series)/batch_size)*batch_size
@@ -253,10 +259,8 @@ def main():
         bitin.close() 
         f.close()
     
-    # np.save(FLAGS.output, series)
+    # Write to output
     f = open(FLAGS.output,'wb')
-    # print(id2char_dict)
-    # print(series[:10])
     f.write(bytearray([id2char_dict[str(s)] for s in series]))
     f.close()
 

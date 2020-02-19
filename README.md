@@ -20,6 +20,22 @@ source torch/bin/activate
 bash install.sh
 ```
 
+BSC Compressor is publicly available. To install on linux (optional/reduces the bootstrap model size)
+```bash
+git clone https://github.com/IlyaGrebnov/libbsc.git
+cd libbsc && make
+cp bsc ../coding-gpu/
+```
+
+To compress/decompress bootstrap model with BSC
+```bash
+# Compress
+./bsc e modelinput modeloutput -b128e2
+# Decompress
+./bsc d modeloutput modelinput
+```
+
+
 ##### ENCODING-DECODING
 ```bash 
 cd coding-gpu

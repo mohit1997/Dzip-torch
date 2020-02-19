@@ -41,6 +41,8 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, final_step=False):
         cumul = np.zeros(vocab_size+1, dtype = np.uint64)
         cumul[1:] = np.cumsum(prob*10000000 + 1)
 
+
+        # Encode first K symbols in each stream with uniform probabilities
         for i in range(bs):
             for j in range(min(timesteps, num_iters)):
                 enc[i].write(cumul, X[ind[i],j])
@@ -48,13 +50,15 @@ def compress(model, X, Y, bs, vocab_size, timesteps, device, final_step=False):
         cumul = np.zeros((bs, vocab_size+1), dtype = np.uint64)
 
         for j in (range(num_iters - timesteps)):
-            # Write Code for probability extraction
+            # Create Batches
             bx = Variable(torch.from_numpy(X[ind,:])).to(device)
             by = Variable(torch.from_numpy(Y[ind])).to(device)
             with torch.no_grad():
                 model.eval()
                 prob = torch.exp(model(bx)).detach().cpu().numpy()
             cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
+
+            # Encode with Arithmetic Encoder
             for i in range(bs):
                 enc[i].write(cumul[i,:], Y[ind[i]])
             ind = ind + 1
@@ -143,11 +147,11 @@ def main():
 
     sequence = sequence.reshape(-1)
     series = sequence.copy()
+
+    # Convert data into context and target symbols
     data = strided_app(series, timesteps+1, 1)
     X = data[:, :-1]
     Y = data[:, -1]
-    X = X.astype('int')
-    Y = Y.astype('int')
 
     params['len_series'] = len(series)
     params['bs'] = batch_size
@@ -161,6 +165,7 @@ def main():
         'hdim1': 8, 'hdim2': 16, 'n_layers': 2,
         'bidirectional': True}
 
+    # Select Model Parameters based on Alphabet Size
     if vocab_size >= 1 and vocab_size <=3:
         bsdic['hdim1'] = 8
         bsdic['hdim2'] = 16

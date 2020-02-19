@@ -41,6 +41,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, final_step=
         cumul = np.zeros(vocab_size+1, dtype = np.uint64)
         cumul[1:] = np.cumsum(prob*10000000 + 1)
 
+        # Decode first K symbols in each stream with uniform probabilities
         for i in range(bs):
             for j in range(min(timesteps, num_iters)):
                 series_2d[i,j] = dec[i].read(cumul, vocab_size)
@@ -48,12 +49,14 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, final_step=
         cumul = np.zeros((bs, vocab_size+1), dtype = np.uint64)
 
         for j in (range(num_iters - timesteps)):
-            # Write Code for probability extraction
+            # Create Batch
             bx = Variable(torch.from_numpy(series_2d[:,j:j+timesteps])).to(device)
             with torch.no_grad():
                 model.eval()
                 prob = torch.exp(model(bx)).detach().cpu().numpy()
             cumul[:,1:] = np.cumsum(prob*10000000 + 1, axis = 1)
+
+            # Decode with Arithmetic Encoder
             for i in range(bs):
                 series_2d[i,j+timesteps] = dec[i].read(cumul[i,:], vocab_size)
             by = Variable(torch.from_numpy(series_2d[:, j+timesteps])).to(device)
@@ -63,6 +66,7 @@ def decompress(model, len_series, bs, vocab_size, timesteps, device, final_step=
         for i in range(bs):
             bitin[i].close()
             f[i].close()
+        
         return series_2d.reshape(-1)
     
     else:
@@ -134,6 +138,7 @@ def main():
     id2char_dict = params['id2char_dict']
     vocab_size = len(id2char_dict)
 
+    # Break into multiple streams
     f = open(FLAGS.file_name+'.combined','rb')
     for i in range(batch_size):
         f_out = open(FLAGS.temp_file_prefix+'.'+str(i),'wb')
@@ -158,6 +163,7 @@ def main():
         'hdim1': 8, 'hdim2': 16, 'n_layers': 2,
         'bidirectional': True}
 
+    # Select Model Parameters based on Alphabet Size
     if vocab_size >= 1 and vocab_size <=3:
         bsdic['hdim1'] = 8
         bsdic['hdim2'] = 16
