@@ -27,14 +27,6 @@ cd libbsc && make
 cp bsc ../coding-gpu/
 ```
 
-To compress/decompress bootstrap model with BSC
-```bash
-# Compress
-./bsc e modelinput modeloutput -b128e2
-# Decompress
-./bsc d modeloutput modelinput
-```
-
 
 ##### ENCODING-DECODING
 ```bash 
@@ -49,6 +41,14 @@ bash decompress.sh FILE.dzip decom_FILE com MODEL_PATH
 bash decompress.sh FILE.dzip decom_FILE bs MODEL_PATH
 # Verify successful decompression
 bash compare.sh FILE.txt decom_FILE
+```
+
+To compress/decompress bootstrap model with BSC
+```bash
+# Compress
+./bsc e modelinput modeloutput -b128e2
+# Decompress
+./bsc d modeloutput modelinput
 ```
 
 ## Links to the Datasets and Trained Boostrap Models
