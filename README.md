@@ -64,6 +64,10 @@ To compress/decompress bootstrap model with BSC
 |enwiki9|http://www.mattmahoney.net/dc/textdata.html|[enwiki9](./Models/enwik9_bstrap)|
 |np-bases|https://github.com/nanopore-wgs-consortium/NA12878|[npbases](./Models/npbases_bstrap)|
 |np-quality|https://github.com/nanopore-wgs-consortium/NA12878|[npquals](./Models/npquals_bstrap)|
+|num-control|https://userweb.cs.txstate.edu/~burtscher/research/datasets/FPdouble/|[model](./Models/num_control.trace.bootstrap)|
+|obs-spitzer|https://userweb.cs.txstate.edu/~burtscher/research/datasets/FPdouble/|[model](./Models/obs_spitzer.trace.bootstrap)|
+|msg-bt|https://userweb.cs.txstate.edu/~burtscher/research/datasets/FPdouble/|[model](./Models/msg_bt.trace.bootstrap)|
+|audio|https://github.com/karolpiczak/ESC-50|[model](./Models/audio.bootstrap)|
 
 ##
 1. Go to [Datasets](./Datasets)
