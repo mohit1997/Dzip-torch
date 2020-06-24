@@ -61,7 +61,7 @@ To compress/decompress bootstrap model with BSC
 |c.e. genome|ftp://ftp.ensembl.org/pub/release-97/fasta/caenorhabditis_elegans/dna/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz|[celegchr](./Models/celegchr_bstrap)|
 |ill-quality|http://bix.ucsd.edu/projects/singlecell/nbt_data.html|[phixq](./Models/phixq_truncated_bstrap)|
 |text8|http://www.mattmahoney.net/dc/textdata.html|[text8](./Models/text8_bstrap)|
-|enwiki9|http://www.mattmahoney.net/dc/textdata.html|[enwiki9](./Models/enwik9_bstrap)|
+|enwiki9|http://www.mattmahoney.net/dc/textdata.html|[enwiki9](./Models/enwiki9.bootstrap)|
 |np-bases|https://github.com/nanopore-wgs-consortium/NA12878|[npbases](./Models/npbases_bstrap)|
 |np-quality|https://github.com/nanopore-wgs-consortium/NA12878|[npquals](./Models/npquals_bstrap)|
 |num-control|https://userweb.cs.txstate.edu/~burtscher/research/datasets/FPdouble/|[model](./Models/num_control.trace.bootstrap)|
