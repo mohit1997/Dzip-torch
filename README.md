@@ -54,8 +54,8 @@ To compress/decompress bootstrap model with BSC
 ## Links to the Datasets and Trained Boostrap Models
 | File | Link |Bootstrap Model|
 |------|------|------|
-|webster|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[webster](./Models/webster_bstrap)|
-|mozilla|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[mozilla](./Models/mozilla_bstrap)|
+|webster|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[webster](./Models/webster.bootstrap)|
+|mozilla|http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia|[mozilla](./Models/mozilla.bootstrap)|
 |h. chr20|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr20.fa.gz|[chr20](./Models/chr20_bstrap)|
 |h. chr1|ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr1.fa.gz|[chr1](./Models/chr1_bstrap)|
 |c.e. genome|ftp://ftp.ensembl.org/pub/release-97/fasta/caenorhabditis_elegans/dna/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz|[celegchr](./Models/celegchr_bstrap)|
