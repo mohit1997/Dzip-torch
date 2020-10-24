@@ -22,9 +22,9 @@
 | File | Length | Vocabulary Size | Brief Description |
 |------|------|------|------| 	
 | webster | 41.1M|  98 |  HTML data of the 1913 Webster Dictionary, from the Silesia corpus | 
-|text8|  100M|  27|   First 100M of English text (only) extracted from enwiki9| 
+|text8|100M|  27|   First 100M of English text (only) extracted from enwiki9| 
 |enwiki9|500M|  206|  First 500M of the English Wikipedia dump on 2006| 		
-|mozilla& 51.2M|  256|  Tarred executables of Mozilla 1.0, from the Silesia corpus| 
+|mozilla| 51.2M|  256|  Tarred executables of Mozilla 1.0, from the Silesia corpus| 
 |h.\ chr20|  64.4M|  5|   Chromosome 20 of H. sapiens GRCh38 reference sequence | 
 |h.\ chr1|  100M|  5|  First 100M bases of chromosome 1 of H. Sapiens GRCh38 sequence |
 |c.e.\ genome |  100M|  4|  C.\ elegans whole genome sequence| 
