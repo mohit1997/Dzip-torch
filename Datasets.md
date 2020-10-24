@@ -35,7 +35,7 @@
 |obs-spitzer|198.2M|  256|  Data from the Spitzer Space Telescope showing a slight darkening| 
 |msg-bt|266.4M|  256|  NPB computational fluid dynamics pseudo-application bt| 	
 |audio|264.6M|  256|  First 600 files (combined) in ESC Dataset for environmental sound classification (https://github.com/karolpiczak/ESC-50)|
-|XOR-k |  10M|  2|  Pseudorandom sequence $S_{n+1 = S_n + S_{n-k\ (\textnormal{mod\ 2)$. | 
+|XOR-k |  10M|  2|  Pseudorandom sequence <img src="https://render.githubusercontent.com/render/math?math=S_%7Bn%2B1%7D%20%3D%20S_n%20%5Cbigoplus%20S_%7Bn-k%7D"> | 
 &&& Entropy rate $0$ bpc.| 
 |HMM-k|  10M|  2|  Hidden Markov sequence $S_n = X_n + Z_n\ (\textnormal{mod\ 2)$, with $Z_n \sim Bern(0.1)$, $X_{n+1 = X_n + X_{n-k\ (\textnormal{mod\ 2)$. Entropy rate $0.46899$ bpc. | 
 
