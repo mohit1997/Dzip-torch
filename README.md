@@ -51,4 +51,4 @@ To compress/decompress bootstrap model with BSC
 ./bsc d modeloutput modelinput
 ```
 
-## Links to the Datasets with description and trained boostrap models can be accesed [here](./Datasets.md)
+## Links to the Datasets with description and trained bootstrap models can be accesed [here](./Datasets.md)
