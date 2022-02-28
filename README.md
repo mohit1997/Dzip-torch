@@ -54,3 +54,19 @@ To compress/decompress bootstrap model with BSC
 ```
 
 ## Links to the Datasets with description and trained bootstrap models can be accesed [here](./Datasets.md)
+
+### Please cite if you utilize the code in this repository.
+```
+
+@INPROCEEDINGS{9418692,
+  author={Goyal, Mohit and Tatwawadi, Kedar and Chandak, Shubham and Ochoa, Idoia},
+  booktitle={2021 Data Compression Conference (DCC)}, 
+  title={DZip: improved general-purpose loss less compression based on novel neural network modeling}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={153-162},
+  doi={10.1109/DCC50243.2021.00023}}
+
+
+```
